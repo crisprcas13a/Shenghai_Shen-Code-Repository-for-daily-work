@@ -1,0 +1,343 @@
+---
+title: "201900700277_assignment2"
+author: "SSH"
+date: "2021/11/14"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+
+
+```{r paged.print=FALSE}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+# lct_snps <- read_delim("E://Rdata//TAG//assignment2//LCT_snps.tsv", delim = "\t")
+# lct_snps
+# write.csv(lct_snps,"E://Rdata//TAG//assignment2//LCT_snps.csv")
+```
+
+# Q1
+
+
+```{r paged.print=FALSE}
+
+lct_snps <- read.csv("E://Rdata//TAG//assignment2//LCT_snps.csv")
+head(lct_snps)
+```
+
+
+
+```{r}
+calc_fst_wponly <- function(p1, p2){
+  
+  # calculate q1 and q2
+  q1 <- 1 - p1
+  q2 <- 1 - p2
+  
+  # calculate total allele frequency
+  pT <- (p1 + p2)/2
+  qT <- 1 - pT
+  
+  # calculate expected heterozygosity
+  # first calculate expected heterozygosity for the two populations
+  # pop1
+  hs1 <- 2*p1*q1
+  # pop2
+  hs2 <- 2*p2*q2
+  # then take the mean of this assuming approx equal population sizes
+  hs <- (hs1 + hs2)/2
+  
+  # next calculate expected heterozygosity for the metapopulations
+  ht <- 2*pT*qT
+  
+  # calculate fst
+  fst <- (ht - hs)/ht
+  
+  # return output
+  return(fst)
+}
+```
+
+## 1.1 FST
+
+### FST of the starting and ending loci
+
+
+```{r paged.print=FALSE}
+loci1 <- lct_snps %>% filter(coord == 134781635)
+loci2 <- lct_snps %>% filter(coord == 137935623)
+loci1
+loci2
+calc_fst_wponly(loci1[1, 4], loci1[1, 5])
+calc_fst_wponly(loci2[1, 4], loci2[1, 5])
+
+lct_snps %>% filter(coord == max(coord))
+```
+
+### FST from the starting loci to the ending loci
+
+```{r paged.print=FALSE}
+pmap_dbl(lct_snps, ~ calc_fst_wponly(..4, ..5))
+# make an fst column
+lct_snps$fst <- pmap_dbl(lct_snps, ~ calc_fst_wponly(..4, ..5))
+lct_snps <- filter(lct_snps, fst != "NaN")
+```
+## 1.2 Plot
+```{r}
+
+a <- ggplot(lct_snps, aes(coord, fst)) + 
+  geom_point(pch = 20, color = "deepskyblue4") +
+  labs(x = "Position (Mb)", y = expression(italic(F)[ST]), title = "Fig1: FST for the described interval along chromosome 2") +
+  ylim(0, 0.45) +
+  theme_bw() +
+  theme(plot.title=element_text(hjust =0.5)) 
+a
+ggsave("E://Rdata//Rimage//TAG//A2//Q1.1.png", plot = last_plot())
+```
+
+## 1.3 Plot with midpoint
+
+```{r}
+# define the start and stop positions of the gene
+lct_start <- 134781635
+lct_stop <- 137935623
+# calculate the midpoint
+lct_mid <- (lct_start + lct_stop)/2
+a <- a + geom_vline(xintercept = lct_mid, lty = 3, col = "blue") + 
+  ggtitle("Fig2: FST for the described interval along chromosome 2") +
+  theme(plot.title=element_text(hjust =0.5))
+a
+ggsave("E://Rdata//Rimage//TAG//A2//Q1.2.png", plot = last_plot())
+```
+
+```{r paged.print=FALSE}
+quantile(lct_snps$fst,0.99, na.rm = T)
+lct_snps <- lct_snps %>%
+  mutate(status = if_else(fst > quantile(lct_snps$fst,0.99) , "Yes", "No"))
+head(lct_snps)
+```
+
+```{r}
+a <- ggplot(lct_snps, aes(coord, fst, colour = status)) + 
+  geom_point(pch = 20) + 
+  labs(x = ("Position (Mb)"),y = (expression(italic(F)[ST])), title = "Fig3: FST for the described interval along chromosome 2") + 
+  geom_vline(xintercept = lct_mid, lty = 3, col = "blue") +
+  theme_bw() + 
+  theme(legend.position = "right") +
+  scale_colour_manual(values = c("deepskyblue4", "red")) +
+  theme(plot.title=element_text(hjust =0.5))
+a
+ggsave("E://Rdata//Rimage//TAG//A2//Q1.3.png", plot = last_plot())
+```
+
+
+
+# Q2
+
+```{r}
+# set up genotype counts
+genotypeG <-c(80,11,19) 
+# Green
+genotypeP <-c(14,4,73) 
+# Pink 
+genotypeB <-c(15,20,15) 
+#Blue 
+# get the number of people sampled 
+N1 <-sum(genotypeG)
+N2 <-sum(genotypeP)
+N3 <-sum(genotypeB)
+# calculate the frequency of the T allele 
+# for Green
+pG <-((genotypeG[1]*2) +genotypeG[2])/(2*N1)
+# for Pink
+pP <-((genotypeP[1]*2) +genotypeP[2])/(2*N2)
+# for Blue
+pB <-((genotypeB[1]*2) +genotypeB[2])/(2*N3)
+# calculate the frequency of the C allele is then simple because the site is biallelic
+qG <-1-pG
+qP <-1-pP
+qB <-1-pB
+# calculate total allele frequency
+pT <-(genotypeG[1]*2+genotypeG[2] +genotypeP[1]*2+genotypeP[2] +genotypeB[1]*2+genotypeB[2])/(2*(N1+N2+N3))
+qT <-1-pT
+# Calculate the actual observed heterozygosity for each population# for Green
+HobsG <-genotypeG[2]/N1
+# for Pink
+HobsP <-genotypeP[2]/N2
+# for Blue
+HobsB <-genotypeB[2]/N3
+# calculate the expected heterozygosity for each population
+# for Green
+HexpG <-2*pG*qG
+# for Pink
+HexpP <-2*pP*qP
+# for Blue
+HexpB <-2*pB*qB
+# calculate HI
+HI <-(HobsG*N1 +HobsP*N2 +HobsB*N3)/(N1 +N2 +N3)
+# calculate HS
+HS <-(HexpG*N1 +HexpP*N2 +HexpB*N3)/(N1 +N2 +N3)
+# calculate HT
+HT <-2*pT*qT
+
+# calculate Fst
+Fst <-(HT -HS) /HT
+Fst
+Fit <-(HT -HI) /HT
+Fit
+
+```
+
+
+```{r paged.print=FALSE}
+Fst_Fit <- function(G, P, B){
+  pT <- (G[1]*2+G[2]+P[1]*2+P[2]+B[1]*2+B[2])/(2*sum(G+P+B))
+  qT <- 1 - pT
+  HI_t <- 0
+  HS_t <- 0
+  for(i in list(G, P, B)){
+    N <- sum(i)
+    p <- (i[1]*2 + i[2])/(2*N)
+    q <- 1 - p
+    HI_t <- HI_t + i[2]
+    HS_t <- HS_t + 2*p*q*N
+  }
+  HI <- HI_t / sum(G,P,B)
+  HS <- HS_t / sum(G,P,B)
+  HT <- 2*pT*qT
+  Fst <-(HT - HS)/HT
+  Fit <-(HT - HI)/HT
+  return(list(Fst = Fst, Fit = Fit))
+}
+Fst_Fit(c(80,11,19),c(14,4,73),c(15,20,15))
+```
+
+
+
+# Q6
+
+
+```{r paged.print=FALSE}
+
+# a custom function for simulating drift across multiple generations
+drift_plot <- function(PopSize, NGen, pstart){
+  #set up the tibble
+  g <- seq(0, NGen, 1)
+
+  
+# Generate simulation function
+  # a custom function for simulating drift across multiple generations
+drift_sim <- function(N, p, ngen){
+  # initialise p to be saved to be added at the end.
+  p_init <- p
+  # sample across all the generations
+  pvec <- sapply(1:ngen, function(x){
+  nA1 <- sum(rbinom(n= 2*N, size = 1, p))
+  pa <- nA1/(2*N)
+  p <<- pa
+    
+  })
+  # create a vector of p over time by adding the initial 
+  pvec <- c(p_init, pvec)
+  # write out
+  return(pvec)
+}
+  
+  
+  simtib = as_tibble(cbind(g))
+  #add new columns per new simulation
+  for (i in PopSize){
+    simtib[as.character(i)] <- drift_sim(N = i, p = pstart, ngen = NGen)
+
+  }
+  #gather and plot
+  simtibGather <- gather(simtib, key = "pop_size", value = "p", -g)
+  simplot <- ggplot(simtibGather, aes(g, p, colour = pop_size)) +
+    geom_line() +
+    scale_color_manual(values = c("#0780cf","#765005","#fa6d1d","#0e2c82", "#b6b51f", "#da1f18")) +
+    xlab("No. generations") + 
+    ylab("Allele freq (p)") +
+    ggtitle("Genetic drift from populations of different sizes") +
+    labs(color = "Population size") +
+    ylim(0, 1) +
+    theme_bw() + 
+    theme(legend.position = "right", 
+          plot.title = element_text(hjust = 0.5)
+          )
+  
+  return(list(simplot = simplot, simtibGather = simtibGather))
+}
+
+gen_drift <- drift_plot(c(100,150,1000,10000,2000,3000), 1000, 0.5)
+
+```
+
+
+```{r}
+gen_drift$simplot
+ggsave("E:/Rdata/Rimage/TAG/Q6.1.png", plot = last_plot())
+xline <- gen_drift$simtibGather %>% group_by(pop_size) %>% filter(p == 1) %>% summarise(g=min(g))
+gen_drift$simplot + geom_vline(xintercept = xline$g, color = "deepskyblue4", lty = 3)
+ggsave("E:/Rdata/Rimage/TAG/Q6.2.png", plot = last_plot())
+```
+
+
+
+```{r}
+# a custom function for simulating drift across multiple generations
+drift_plot <- function(PopSize, NGen, pstart){
+  #set up the tibble
+  g <- seq(0, NGen, 1)
+
+  
+# Generate simulation function
+  # a custom function for simulating drift across multiple generations
+drift_sim <- function(N, p, ngen){
+  # initialise p to be saved to be added at the end.
+  p_init <- p
+  # sample across all the generations
+  pvec <- sapply(1:ngen, function(x){
+  nA1 <- sum(rbinom(n= 2*N, size = 1, p))
+  pa <- nA1/(2*N)
+  p <<- pa
+    
+  })
+  # create a vector of p over time by adding the initial 
+  pvec <- c(p_init, pvec)
+  # write out
+  return(pvec)
+}
+  
+  
+  simtib = as_tibble(cbind(g))
+  #add new columns per new simulation
+  for (i in PopSize){
+    simtib[as.character(i)] <- drift_sim(N = i, p = pstart, ngen = NGen)
+
+  }
+  #gather and plot
+  simtibGather <- gather(simtib, key = "pop_size", value = "p", -g)
+  simtibGather
+  xline <- simtibGather %>% group_by(pop_size) %>% filter(p == 1) %>% summarise(g=min(g))
+
+  simplot <- ggplot(simtibGather, aes(g, p, colour = pop_size)) +
+    geom_line() +
+    geom_vline(xintercept = xline$g, color = "deepskyblue4", lty = 3) +
+    scale_color_manual(values = c("#0780cf","#765005","#fa6d1d","#0e2c82", "#b6b51f", "#da1f18")) +
+    xlab("No. generations") + 
+    ylab("Allele freq (p)") +
+    ggtitle("Genetic drift from populations of different sizes") +
+    labs(color = "Population size") +
+    ylim(0, 1) +
+    theme_bw() + 
+    theme(legend.position = "right", 
+          plot.title = element_text(hjust = 0.5)
+          )
+  return(simplot)
+}
+drift_plot(c(100,150,1000,10000,2000,3000), 1000, 0.5)
+```
+

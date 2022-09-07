@@ -1,0 +1,326 @@
+---
+title: "TAG_Assignment #3"
+author: "SSH"
+date: "06/12/2021"
+output:   
+  html_document: default
+  #word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, eval = TRUE, echo = TRUE, message = FALSE}
+# clear the R environment
+rm(list = ls())
+library(tidyverse)
+library(ggplot2)
+```
+
+# Q1
+
+## Q1.1
+```{r paged.print=FALSE}
+HWE_test <- function(G, P, B){
+  N_AA <- sum(G[1],P[1],B[1])
+  N_AG <- sum(G[2],P[2],B[2])
+  N_GG <- sum(G[3],P[3],B[3])
+  observedGenotypeNumber <- c(N_AA, N_AG, N_GG)
+  n <- 2*sum(observedGenotypeNumber)
+  A <- (N_AA*2 + N_AG)/n
+  G <- 1 - A
+  p_AA <- A**2
+  p_AG <- 2*A*G
+  p_GG <- G**2
+  expectedGenotypeFrequency <- c(p_AA, p_AG, p_GG)
+  expectedGenotypeNumber <- expectedGenotypeFrequency*n
+  mychi <- chisq.test(observedGenotypeNumber, p =expectedGenotypeFrequency)
+  return(mychi)
+}
+HWE_test(c(42,50,12),c(42,82,12),c(12,25,42))
+```
+## Q1.2
+
+```{r}
+HWE_test <- function(G, P, B){
+  mychi <- 0
+  times <- 1
+  for(i in list(G,P,B)){
+  observedGenotypeNumber <- c(i[1], i[2], i[3])
+  n <- 2*sum(observedGenotypeNumber)
+  A <- (i[1]*2 + i[2])/n
+  G <- 1 - A
+  p_AA <- A**2
+  p_AG <- 2*A*G
+  p_GG <- G**2
+  expectedGenotypeFrequency <- c(p_AA, p_AG, p_GG)
+  expectedGenotypeNumber <- expectedGenotypeFrequency*n
+  mychi <- chisq.test(observedGenotypeNumber, p =expectedGenotypeFrequency)
+  times <- 1 + times
+  print(mychi)
+  }}
+HWE_test(c(42,50,12),c(42,82,12),c(12,25,42))
+```
+
+
+
+
+## Q1.4
+
+```{r, eval = TRUE, echo = TRUE, message = FALSE}
+F_stat1 <- function(G, P, B){
+  pA <- (G[1]*2+G[2]+P[1]*2+P[2]+B[1]*2+B[2])/(2*sum(G+P+B))
+  qG <- 1 - pA
+  HI_t <- 0
+  HS_t <- 0
+  for(i in list(G, P, B)){
+    N <- sum(i)
+    p <- (i[1]*2 + i[2])/(2*N)
+    q <- 1 - p
+    HI_t <- HI_t + i[2]
+    HS_t <- HS_t + 2*p*q*N
+  }
+  HI <- HI_t / sum(G,P,B)
+  HS <- HS_t / sum(G,P,B)
+  HT <- 2*pA*qG
+  Fst <-(HT - HS)/HT              
+  Fit <-(HT - HI)/HT
+  Fis <-(HS - HI)/HS
+  return(list(Fst = Fst, Fit = Fit, Fis = Fis))
+}
+F_stat1(c(42,50,12),c(42,82,12),c(12,25,42))
+```
+
+## Q1.5
+
+```{r}
+F_stat2 <- function(G, P, B){
+  species <- matrix(data = c(G,P,B), nrow = 3)
+  permutation <- combn(1:3,2)
+  for(i in 1:3){
+  HI_t <- 0
+  HS_t <- 0
+  d <- species[,permutation[,i]]
+  pA <- (d[1,1]*2+d[2,1]+d[1,2]*2+d[2,2])/(2*sum(d))
+  qG <- 1 - pA
+  HS_t <- (d[1,1]*2+d[2,1])*(1-(d[1,1]*2+d[2,1])/(2*sum(d[,1])))+(d[1,2]*2+d[2,2])*(1-(d[1,2]*2+d[2,2])/(2*sum(d[,2])))
+  HS <- HS_t / sum(d)
+  HT <- 2*pA*qG
+  Fst <-(HT - HS)/HT
+  vs <- c("Green","Pink","Blue")[permutation[,i]]
+  print(paste(vs[1],"vs.",vs[2],":",round(Fst,4)))
+  }}
+F_stat2(c(42,50,12),c(42,82,12),c(12,25,42))
+```
+
+# Q2
+
+
+## Q2.3
+
+
+```{r}
+
+mytheme <- theme_minimal()+
+  theme(
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+    panel.border = element_rect(fill = NA),
+    plot.title=element_text(hjust =0.5),
+    axis.line.y=element_line(linetype=1,color='black'),
+    axis.line.x=element_line(linetype=1,color='black'),
+    axis.ticks = element_line(linetype=2,color='black'),
+    panel.grid=element_line(linetype=2,color='black'),
+    # legend.position = "none", 
+    axis.text=element_text(face="bold",size=8)
+  )
+
+spectrum <- data.frame(Allele_freq = c(1,2),freq = c(6,2))
+spectrum$Allele_freq <- as.factor(spectrum$Allele_freq)
+ggplot(spectrum) +
+  aes(x = Allele_freq, weight = freq, fill = Allele_freq) +
+  geom_bar(width = 0.7) +
+  scale_fill_manual(
+        values = list(
+            "1" = "#7fbfff",
+            "2" = "#93c9ff",
+            "3" = "#add6ff",
+            "4" = "#c6e2ff"
+        )) +
+  theme_bw() +
+  ylim(0,7) +
+  labs(x = "Allele frequency", y = "Number of sites",title = "(1) Folded site frequency spectrum of locus blue in species B")+
+  mytheme
+# save the plot
+ggsave("E://Rdata//Rimage//TAG//as3_Q2.1.png", plot = last_plot(), width = 6,height = 5)
+```
+
+
+
+
+```{r}
+spectrum <- data.frame(Allele_freq = c(1,2),freq = c(6,2))
+spectrum$Allele_freq <- as.factor(spectrum$Allele_freq)
+ggplot(spectrum) +
+  aes(x = Allele_freq, weight = freq, fill = Allele_freq) +
+  geom_bar(width = 0.7) +
+  scale_fill_manual(
+        values = list(
+            "1" = "#ff7fbf",
+            "2" = "#ff93c9"
+        )) +
+  theme_bw() +
+  ylim(0, 7) +
+  labs(x = "Allele frequency", y = "Number of sites",title = "(2) Folded site frequency spectrum of locus pink in species B")+
+  mytheme
+# save the plot
+ggsave("E://Rdata//Rimage//TAG//as3_Q2.2.png", plot = last_plot(), width = 6,height = 5)
+```
+
+
+
+```{r}
+spectrum <- data.frame(Allele_freq = c(1,2,3),freq = c(5,4,0))
+spectrum$Allele_freq <- as.factor(spectrum$Allele_freq)
+ggplot(spectrum) +
+  aes(x = Allele_freq, weight = freq, fill = Allele_freq) +
+  geom_bar(width = 0.7) +
+  scale_fill_manual(
+        values = list(
+            "1" = "#7fbfff",
+            "2" = "#93c9ff",
+            "3" = "#add6ff"
+        )) +
+  theme_bw() +
+  ylim(0, 7) +
+  labs(x = "Allele frequency", y = "Number of sites",title = "(3) Folded site frequency spectrum of locus blue in species C")+
+  mytheme
+# save the plot
+ggsave("E://Rdata//Rimage//TAG//as3_Q2.3.png", plot = last_plot(), width = 6,height = 5)
+```
+
+
+
+```{r}
+spectrum <- data.frame(Allele_freq = c(1,2,3),freq = c(6,3,0))
+spectrum$Allele_freq <- as.factor(spectrum$Allele_freq)
+ggplot(spectrum) +
+  aes(x = Allele_freq, weight = freq, fill = Allele_freq) +
+  geom_bar(width = 0.7) +
+  scale_fill_manual(
+        values = list(
+            "1" = "#ff7fbf",
+            "2" = "#ff93c9",
+            "3" = "#ffadd6"
+        )) +
+  theme_bw() +
+  ylim(0, 8) +
+  labs(x = "Allele frequency", y = "Number of sites",title = "(4) Folded site frequency spectrum of locus pink in species C")+
+  mytheme
+# save the plot
+ggsave("E://Rdata//Rimage//TAG//as3_Q2.4.png", plot = last_plot(), width = 6,height = 5)
+```
+
+
+```{r}
+myspectrum <- data.frame(Allele = c(1,2),freq = c(6,2))
+myspectrum$Allele <- as.factor(myspectrum$Allele)
+ggplot(myspectrum) +
+  aes(x = Allele, weight = freq, fill = Allele) +
+  geom_bar(width = 0.8) +
+  scale_fill_manual(values = list("1" = "burlywood1", "2" = "burlywood2","3" = "burlywood3","4" = "burlywood3")) +
+  labs(x = "Allele frequency", y = "Site frequency",title = "(1) Folded SFS of locus blue in species B") +
+  theme_bw()
+```
+
+```{r}
+myspectrum <- data.frame(Allele = c(1,2),freq = c(5,2))
+myspectrum$Allele <- as.factor(myspectrum$Allele)
+ggplot(myspectrum) +
+  aes(x = Allele, weight = freq, fill = Allele) +
+  geom_bar(width = 0.8) +
+  scale_fill_manual(values = list("1" = "burlywood1", "2" = "burlywood2","3" = "burlywood3","4" = "burlywood3")) +
+  labs(x = "Allele frequency", y = "Site frequency",title = "(2) Folded SFS of locus pink in species B") +
+  theme_bw()
+```
+
+
+```{r}
+myspectrum <- data.frame(Allele = c(1,2,3),freq = c(6,6,0))
+myspectrum$Allele <- as.factor(myspectrum$Allele)
+ggplot(myspectrum) +
+  aes(x = Allele, weight = freq, fill = Allele) +
+  geom_bar(width = 0.8) +
+  scale_fill_manual(values = list("1" = "burlywood1", "2" = "burlywood2","3" = "burlywood3","4" = "burlywood3","5" = "chocolate1","6" = "chocolate2")) +
+  labs(x = "Allele frequency", y = "Site frequency",title = "(3) Folded SFS of locus blue in species C") +
+  theme_bw()
+```
+
+```{r}
+myspectrum <- data.frame(Allele = c(1,2,3),freq = c(9,4,0))
+myspectrum$Allele <- as.factor(myspectrum$Allele)
+ggplot(myspectrum) +
+  aes(x = Allele, weight = freq, fill = Allele) +
+  geom_bar(width = 0.8) +
+  scale_fill_manual(values = list("1" = "burlywood1", "2" = "burlywood2","3" = "burlywood3","4" = "burlywood3","5" = "chocolate1","6" = "chocolate2")) +
+  labs(x = "Allele frequency", y = "Site frequency",title = "(4) Folded SFS of locus pink in species C") +
+  theme_bw()
+```
+
+
+
+
+```{r}
+n1 <- c(19,6) 
+m1 <- c(19,8)
+n <- c(14/19,5/19)
+m <- c(20/24,4/24)
+chisq.test(n, p = m)
+```
+
+
+# Q3
+
+
+## Q3.1
+
+
+```{r}
+library(tidyverse)
+library(ape)
+library(pegas)
+```
+
+```{r paged.print=FALSE}
+aln <- read.dna("E://Rdata//TAG//assignment3//aln.fas", format = "fasta")
+aln
+```
+
+
+
+
+```{r paged.print=TRUE}
+align <- as.alignment(aln)
+align$seq
+alview(aln)
+```
+
+
+```{r}
+base.freq(aln)
+GC.content(aln)
+base.freq(aln)
+
+```
+```{r}
+alview(aln)
+```
+
+```{r paged.print=FALSE}
+seg.sites(aln)
+```
+
+
