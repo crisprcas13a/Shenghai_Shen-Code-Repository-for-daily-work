@@ -1,0 +1,110 @@
+---
+title: "ANU 2"
+author: "Farmmer"
+date: "2021/10/21"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r}
+starwars <- dplyr::starwars
+
+hde <- starwars %>% filter(species == c("Human","Droid","Ewok"))
+a <- ggplot(hde, aes(species, mass))
+a + geom_boxplot()
+
+
+
+
+
+hd <- starwars %>% subset(species == "Human" | species == "Droid")
+hd <- hd %>% select(name, height, mass, species)
+hd_g <- hd %>% gather(key = "measurement", value = "value", -name, -species)
+filter(hd_g, name == "R2-D2")
+a <-  ggplot(hd_g, aes(species, value)) + geom_boxplot()
+a + facet_grid(~measurement)
+ggsave("./myplot.pdf", plot = last_plot(), device = "pdf")
+```
+```{r}
+# generate a range for p
+p <- seq(0, 1, 0.01)
+# and also for q
+q <- 1 - p
+A1A1_e <- p^2
+A1A2_e <- 2 * (p * q)
+A2A2_e <- q^2
+genoFreqDf <- as_tibble(cbind(p, q, A1A1_e, A1A2_e, A2A2_e))
+genoFreqDf
+genoFreqDf <- gather(genoFreqDf, key = "genotype", value = "freq", -p, -q)
+genoFreqDf
+a <- ggplot(genoFreqDf, aes(p, freq, colour = genotype)) + geom_line()
+a <-a + ylab("Genotype frequency") + xlab("p frequency")
+a + theme_light() + theme(legend.position = "bottom")
+```
+
+```{r}
+table1 <- matrix(c(0,0.071,0,0.571,0.357,0,0.001,0.056,0.013,0.617,0.281,0.032),nrow = 6,ncol = 2)
+chisq.test(table1)
+```
+
+```{r}
+B1B1_o <- 80
+B1B2_o <- 20
+B2B2_o <- 100
+observedGenotypeNumber <- c(B1B1_o, B1B2_o, B2B2_o)
+n <- 2*sum(observedGenotypeNumber)
+p <- (2*(B1B1_o) + B1B2_o)/n
+q <- (2*(B2B2_o) + B1B2_o)/n
+B1B1_e <- p^2
+B1B2_e <- 2 * (p * q)
+B2B2_e <- q^2
+expectedGenotypeFreq <- c(B1B1_e, B1B2_e, B2B2_e)
+expectedGenotypeNumber <- expectedGenotypeFreq * sum(B1B1_o, B1B2_o, B2B2_o)
+chisq.test(observedGenotypeNumber, p = expectedGenotypeFreq)
+
+```
+```{r}
+p=0.5
+q=1-p
+B1B1_e <- p^2
+B1B2_e <- 2 * (p * q)
+B2B2_e <- q^2
+expectedGenotypeFreq <- c(B1B1_e, B1B2_e, B2B2_e)
+genoFreqDf <- as_tibble(cbind(p, q, B1B1_e, B1B2_e, B2B2_e))
+genoFreqDf <- gather(genoFreqDf, key = "genotype", value = "freq", -p, -q)
+exceptnumber = 150* genoFreqDf$freq
+exceptnumber 
+```
+```{r}
+p <- seq(0, 1, 0.01)
+q <- 1 - p
+B1B1_e <- p^2
+B1B2_e <- 2 * (p * q)
+B2B2_e <- q^2
+expectedGenotypeFreq <- c(B1B1_e, B1B2_e, B2B2_e)
+genoFreqDf <- as_tibble(cbind(p, q, B1B1_e, B1B2_e, B2B2_e))
+genoFreqDf <- gather(genoFreqDf, key = "genotype", value = "freq", -p, -q)
+a <- ggplot(genoFreqDf, aes(p, freq, colour = genotype)) + geom_line()
+a <-a + ylab("Genotype frequency") + xlab("p frequency")
+a + theme_light() + theme(legend.position = "bottom")+
+  geom_vline(xintercept = 0.5,colour="pink")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
