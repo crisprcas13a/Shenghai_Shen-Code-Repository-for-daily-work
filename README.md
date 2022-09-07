@@ -3,3 +3,4 @@
 #### As an undergraduate program aligned to the Australian National University's 'Quantitative Biology' Master's program, Shen and his classmates studied a number of components involving statistics and data science in their undergraduate studies. And a range of cross-disciplinary research has been done.
 #### However, Shen's programming skills are not well demonstrated in the corresponding material. So he created this open source project to showcase the code scripts used in his daily course work and research projects.
 * It is worth noting that some code data that cannot be made public (unpublished) cannot be uploaded here in time. Thesecan be obtained by contacting Shen if required (shenghaishen@mail.sdu.edu.cn).
+* Please note that the "Fighting Epidemics" game is in another branch!!
