@@ -1,0 +1,248 @@
+---
+title: 'Workshop 03: Descriptive Statistics and Data Presentation'
+date: "Semester 1, 2021"
+author: "[Marcin Adamski](mailto:marcin.adamski@anu.edu.au)"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 4
+keep_tex: no
+---
+
+# Learning Objectives
+
+* Working with R Markdown
+* Working with Data
+* Calculating Descriptive Statistics
+* Using R plotting functions
+* Formulating Null hypothesis
+
+# R functions used in this workshop
+
+* `[]` operator
+* `boxplot()`
+* `colnames()`
+* `hist()`
+* `legend()`
+* `mean()`
+* `paste()`
+* `plot()`
+* `points()`
+* `read.csv()`
+* `sd()`
+* `sqrt()`
+* `str()`
+* `var()`
+
+# Before you begin
+
+1. Open RStudio
+1. Create a new project for this workshop
+1. Create a new 'R Markdown' file
+
+**Type as much descriptive text into your R Markdown document as you can only think about.**  
+Remember: This document is your lab book! The information in it must be sufficient to **reproduce your research**, allow others to understand your way of thinking, and allow you to use it in your later work (e.g. when writing assessments, thesis, blogs or papers). Imagine that you are writing a manual and a report at the same time.  
+
+# Problem: Cod fish in Atlantic
+
+Marine Biologists around the World track yearly changes to the quantity of young fish reaching adulthood in the fisheries. The data are used, for example to assign quota to the fishing industry.  
+Norway and United Kingdom are independently collecting so called 'scores of recruited young cod'. These scores reflect the number of young cods reaching adulthood (and harvestable size). The higher the score, the more fish reached the adulthood. The data are collected each year and are available for 40 years back. The data file is available at the Moodle site: [CodRecruitment.csv](https://anu.moodlecloud.com/pluginfile.php/605/mod_folder/content/0/CodRecruitment.csv?forcedownload=1). Please download this file and save it in your RStudio project directory.
+Using the data file please perform following tasks:  
+
+a. Load the data into R, use the `read.csv()` function. Look at the data in R (you can use the RStudio data viewer). What are the column names? How many observations are there (rows of data)? To load the data use following statement: `cod <- read.csv("CodRecruitment.csv", stringsAsFactors = T)`
+b. Present the data in graphical format (on a plot). Choose the best type of plot to show both data series (one for Norway and second for the UK) and present the yearly changes.
+c. Calculate the mean, variance, standard deviation and standard error over the whole period for the data from Norway and UK separately. Additionally, present the data on a Box plot.
+d. In your opinion: Are there differences between data collected by Norway and UK? Formulate the Null hypothesis we could test to answer this question.
+e. Create histograms from the UK and Norwegian data to present distribution of frequency of observing the recruitment scores.
+
+# **SOLUTION**
+
+### a. Load the data into R.
+
+Load the data into R with the `read.csv()` function:
+
+```{r}
+cod <- read.csv("CodRecruitment.csv", stringsAsFactors = T)
+```
+
+To print the names of the columns we use the `colnames()` function:
+
+```{r}
+colnames(cod)
+```
+
+Print number of observations (number of rows) using the `nrow()` function:
+
+```{r}
+nrow(cod)
+```
+
+We can also use function `str()` to get information about the structure of an object, e.g. a data frame:
+
+```{r}
+str(cod)
+```
+
+### b. Present the data in a graphical format.
+
+There are several plots which can present the data. We need to notice that the `year` variable is discrete and the `score_NO` and `score_UK` variables are continuous.
+The best plots for the task would be a scatter plot. We can create it with function `plot()` and add second data series with function `points()`:
+
+```{r}
+#create the 'base' plot with one data series:
+plot(cod$year, cod$score_UK)
+#add second data series as points:
+points(cod$year, cod$score_NO)
+```
+
+Our plot would use some customization, e.g. different symbols and colors for the data series, axis labels, legend, etc.
+
+```{r}
+#create the 'base' plot with one data series:
+plot(cod$year, cod$score_UK, 
+     type = "p", 
+     col = "cadetblue3", 
+     pch = 17, 
+     xlim = c(1970, 2020), 
+     ylim = c(3, 8),
+     xlab = "year",
+     ylab = "cod score",
+     bty = "n",
+     main = "Cod recruitment in North Sea reported by Norway and UK"
+  )
+
+#add second data series as points:
+points(cod$year, cod$score_NO, 
+       col = "brown3", 
+       pch = 18,
+       cex = 1.2
+  )
+
+#add the legend
+legend("topleft", 
+       legend = c("Norway", "UK"), 
+       col = c("cadetblue3", "brown3"), 
+       pch = c(17, 18), 
+       cex = 0.8, 
+       bty = "n", 
+       horiz = T
+  )
+```
+
+### c. Calculate the mean, variance, standard deviation and standard error.
+
+To calculate the descriptive statistics we will use the functions available in r. R doesn't have a function to estimate standard error from the sample. To do it we will use the standard error formula from the lecture.  
+We will also use the `paste()` function to create a sentence of text and the function `round()` to round the calculated values to the second significant digit.
+
+The mean, variance, SD, and SE for the UK:
+
+```{r}
+score_uk.mu  <- mean(cod$score_UK)
+score_uk.var <- var(cod$score_UK)
+score_uk.sd  <- sd(cod$score_UK)
+score_uk.se  <- sd(cod$score_UK) / sqrt(nrow(cod))
+
+paste("Mean, variance, SD, and SE from cod score reported by UK over the period 1975 - 2018 are:", 
+      "mu =", round(score_uk.mu, 2), ",", 
+      "var =", round(score_uk.var, 2), ",", 
+      "sd =", round(score_uk.sd, 2), ",", 
+      "SE =", round(score_uk.se, 2)
+    )
+
+```
+
+The mean, variance, SD, and SE for Norway:
+
+```{r}
+score_no.mu  <- mean(cod$score_NO)
+score_no.var <- var(cod$score_NO)
+score_no.sd  <- sd(cod$score_NO)
+score_no.se  <- sd(cod$score_NO) / sqrt(nrow(cod))
+
+paste("Mean, variance, SD, and SE from cod score reported by Norway over the period 1975 - 2018 are:", 
+      "mu =", round(score_no.mu, 2), ",", 
+      "var =", round(score_no.var, 2), ",", 
+      "sd =", round(score_no.sd, 2), ",", 
+      "SE =", round(score_no.se, 2)
+    )
+
+```
+
+We can also use function `summary()` to get quick summary of the data:
+
+```{r}
+summary(cod$score_UK)
+summary(cod$score_NO)
+```
+
+We should notice that the `summary()` function does not provide all the statistics we were asked for.  
+
+To create the Box plot we will use the R `boxplot()` function:
+
+```{r}
+boxplot(cod$score_NO, cod$score_UK)
+```
+
+We can of course improve appearance of the plot with colours and labels:
+
+```{r}
+boxplot(cod$score_NO, cod$score_UK,
+        names = c("Norway", "UK"),
+        col = c("cadetblue3", "brown3"),
+        ylab = "cod score",
+        main = "Cod recruitment in North Sea reported by Norway and UK"
+        )
+```
+
+### d. Are there differences between data collected by Norway and UK? Formulate the Null hypothesis we could test to answer this question.
+
+The data collected by Norway and UK show almost the same mean cod recruitment score over the period of 1975 and 2018: `r score_no.mu` vs. `r score_uk.mu`. Interestingly, the data reported by Norway has a very low spread - standard deviation is `r score_no.sd` The spread of data collected by UK is much larger - standard deviation is `r score_uk.sd`. By only looking at the data it is difficult to answer if the observed discrepancies are statistically significant.  
+To test for statistical significance we would need to formulate a Null hypothesis, run statistical test and interpret the obtained _p_-value. The Null hypothesis appropriate for this problem would be: 
+"_H_~0~ - There are no differences between data collected by Norway and UK. All the differences we observe are only due to stochastic variation."
+
+### e. Create histograms from the UK and Norwegian data
+
+We can create the histograms using the R `hist()` function:
+
+```{r}
+hist(cod$score_UK, col = "firebrick")
+hist(cod$score_NO, col = "goldenrod1")
+```
+
+We can also put the two histograms on one graph:
+
+```{r}
+hist(cod$score_UK, 
+     breaks = seq(4, 8, by = 0.5), 
+     col = "firebrick", 
+     xlim = c(4, 8), 
+     ylim = c(0, 25),
+     main = "")
+hist(cod$score_NO, 
+     breaks = seq(4, 8, by = 0.5), 
+     col = "goldenrod1", 
+     xlim = c(4, 8), 
+     ylim = c(0, 25), 
+     add = T)
+```
+
+The data series would  look even better if the colours were semi-transparent and of course we need a legend:
+
+```{r}
+hist(cod$score_UK, 
+     breaks = seq(4, 8, by = 0.5), 
+     col = adjustcolor("firebrick", alpha.f = 0.8), 
+     xlim = c(4, 8), 
+     ylim = c(0, 25),
+     xlab = "cod score",
+     main = "")
+hist(cod$score_NO, 
+     breaks = seq(4, 8, by = 0.5), 
+     col = adjustcolor("goldenrod1", alpha.f = 0.8), 
+     xlim = c(4, 8), 
+     ylim = c(0, 25), 
+     add = T)
+legend("topright", legend = c("UK", "Norway"), col = c(adjustcolor("firebrick", alpha.f = 0.8), adjustcolor("goldenrod1", alpha.f = 0.8)), lty = 1, lwd = 5, bty = "n")
+```
+
+<div class="footer"><br>End of Workshop 03</div>

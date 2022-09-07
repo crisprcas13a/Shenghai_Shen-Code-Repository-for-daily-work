@@ -1,0 +1,43 @@
+---
+title: "Problem: Snakes"
+author: "Farmmer"
+date: "2021/3/11"
+output: html_document
+---
+After graduating from your ANU-SDU biology program, you are interviewed for a lucrative job as a snake handler in the Australian Iron Range National Park.
+As part of your audition, you must pick up two Coastal Taipan snakes (Oxyuranus scutellatus) from the park’s snake terrarium. There are eight snakes in the terrarium, three of which have been previously defanged and are assumed to be harmless, but the other five are extremely venomous. Unfortunately, due to the COVID-19 pandemic the herpetology course has been canceled, and you do not know how to tell which snakes are still dangerous and which are not.
+You pick up one snake with your left hand and another snake with your right.
+
+**a:What is the probability that you picked up two defanged (safe) snakes?**
+ 
+$Answer$:
+  We can use the formula:
+$$
+C_3^2*C_5^0\ /C_8^2 =3/28
+$$
+ 
+ **b:If you picked up only one snake and it did not bite you, what is the probability that this snake was defanged? Assume that the defanged snakes do not bite and the dangerous snakes bite with probability of 0.8.**
+ 
+$Answer$:
+  So we have to use *Bayes Theorem*
+$$
+P(A∩B) = P(A)*P(B|A)=P(B)*P(A|B)
+$$
+ so we add the number
+ 
+ $$
+P(snake \; defanged \; | \; snake \; did \; not \; bite) = \frac{P(snake \; did \; not \; bite \; | \; snake \; defanged) P(snake \; defanged)}{P(snake \; did \; not \; bite)}
+$$
+
+* option
+  * sub option 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 

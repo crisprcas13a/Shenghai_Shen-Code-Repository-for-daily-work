@@ -1,0 +1,380 @@
+---
+title: "dplyr"
+author: "FAR"
+date: "2021/3/16"
+output: html_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,message=FALSE,warning=FALSE)
+```
+
+1.  数据集类型转换
+
+    tbl_df()可用于将过长过大的数据集转换为显示更友好的 tbl_df 类型。使用dplyr包处理数据前，建议先将数据集转换为tbl对象。
+
+    **语法 ： tbl_df(data)**
+```{r}
+#data.frame类型数据集
+library(tidyverse)
+#转换为tbl_df类型,没有预设的列数字。
+ds <- tbl_df(mtcars)
+#转换为data.frame类型
+df <- as.data.frame(ds)
+head(ds)
+head(df)
+```
+2. 筛选: filter
+filter() 和slice()函数可以按给定的逻辑条件筛选出符合要求的子数据集, 类似于 base::subset() 函数，但代码更加简洁, 同时也支持对同一对象的任意个条件组合（表示AND时要使用&或者直接使用逗号），返回与.data相同类型的对象。原数据集行名称会被过滤掉。
+
+  **语法 ：filter(.data, ...)**
+```{r}
+#过滤出cyl < 6 或者 vs == 1的行
+head(filter(mtcars, cyl < 6 | vs == 1))
+#过滤出cyl 为4或6的行
+head(filter(mtcars, cyl %in% c(4, 6)))
+```
+slice() 函数通过行号选取数据。
+```{r}
+#选取第一行数据
+slice(mtcars, 1L)
+#选取第5行到最后一行所有数据
+slice(mtcars, 5:n())
+# filter(mtcars, between(row_number(), 5, n()))
+```
+3. 排列: arrange
+  arrange()按给定的列名依次对行进行排序，类似于base::order()函数。默认是按照升序排序，对列名加 desc() 可实现倒序排序。原数据集行名称会被过滤掉。
+
+**语法 ： arrange(.data, ...)**
+```{r}
+#以cyl和disp联合升序排序
+head(arrange(mtcars, cyl, disp))
+#以disp降序排序
+head(arrange(mtcars, desc(disp)))
+```
+4. 选择: select
+select()用列名作参数来选择子数据集。dplyr包中提供了些特殊功能的函数与select函数结合使用， 用于筛选变量，包括starts_with，ends_with，contains，matches，one_of，num_range和everything等。用于重命名时，select()只保留参数中给定的列，rename()保留所有的列，只对给定的列重新命名。原数据集行名称会被过滤掉。
+**语法 ： select(.data, ...)**
+```{r}
+#选取变量名前缀包含Petal的列
+iris <- tbl_df(iris)
+
+#选取变量名后缀包含Width的列
+select(iris, ends_with("Width"))
+
+#选取变量名前缀不包含Petal的列
+select(iris, -starts_with("Petal"))
+
+#选取变量名中包含etal的列
+select(iris, contains("etal"))
+
+#正则表达式匹配，返回变量名中包含t的列
+select(iris, matches(".t."))
+
+#直接选取列
+select(iris, Petal.Length, Petal.Width)
+
+#使用冒号连接列名，选择多个列
+select(iris, Sepal.Length:Petal.Width)
+#选择字符向量中的列，select中不能直接使用字符向量筛选，需要使用one_of函数
+vars <- c("Petal.Length", "Petal.Width")
+select(iris, one_of(vars))
+
+#返回所有列，一般调整数据集中变量顺序时使用
+select(iris, everything())
+
+#调整列顺序，把Species列放到最前面
+select(iris, Species, everything())
+
+
+```
+```{r}
+df <- as.data.frame(matrix(runif(100), nrow = 10))
+df <- tbl_df(df[c(3, 4, 7, 1, 9, 8, 5, 2, 6, 10)])
+#选择V4，V5，V6三列
+select(df, V4:V6)
+select(df, num_range("V", 4:6))
+```
+重命名语法 ： rename(.data, ...)
+```{r}
+#重命名列Petal.Length，返回子数据集只包含重命名的列
+select(iris, petal_length = Petal.Length)
+#重命名所有以Petal为前缀的列，返回子数据集只包含重命名的列
+select(iris, petal = starts_with("Petal"))
+#重命名列Petal.Length，返回全部列
+rename(iris, petal_length = Petal.Length)
+
+```
+5.变形: mutate
+
+mutate()和transmute()函数对已有列进行数据运算并添加为新列，类似于base::transform() 函数, 不同的是可以在同一语句中对刚增添加的列进行操作。mutate()返回的结果集会保留原有变量，transmute()只返回扩展的新变量。原数据集行名称会被过滤掉。
+**语法 ： mutate(.data, ...)
+        transmute(.data, ...)**
+```{r}
+#添加新列wt_kg和wt_t,在同一语句中可以使用刚添加的列
+mutate(mtcars, wt_kg = wt * 453.592, wt_t = wt_kg / 1000)
+#计算新列wt_kg和wt_t，返回对象中只包含新列
+transmute(mtcars, wt_kg = wt * 453.592, wt_t = wt_kg / 1000)
+```
+6. 去重: distinct
+  distinct()用于对输入的tbl进行去重，返回无重复的行，类似于 base::unique() 函数，但是处理速度更快。原数据集行名称会被过滤掉。
+**  语法 ：distinct(.data, ..., .keep_all = FALSE)**
+```{r}
+df <- data.frame(
+  x = sample(10, 100, rep = TRUE),
+  y = sample(10, 100, rep = TRUE)
+)
+df
+```
+```{r}
+#以全部两个变量去重，返回去重后的行数
+nrow(distinct(df))
+#以变量x去重，只返回去重后的x值
+distinct(df, x)
+#以变量y去重，返回所有变量
+distinct(df, y, .keep_all = TRUE)
+#对变量运算后的结果去重
+distinct(df, diff = abs(x - y))
+```
+8. 抽样: sample
+  抽样函数，sample_n()随机抽取指定数目的样本，sample_frac()随机抽取指定百分比的样本，默认都为不放回抽样，通过设置replacement = TRUE可改为放回抽样，可以用于实现Bootstrap抽样。
+
+  **语法 ：sample_n(tbl, size, replace = FALSE, weight = NULL,.env = parent.frame())**
+```{r}
+#随机无重复的取10行数据
+sample_n(mtcars, 10)
+#随机有重复的取50行数据
+sample_n(mtcars, 50, replace = TRUE)
+#随机无重复的以mpg值做权重取10行数据
+sample_n(mtcars, 10, weight = mpg)
+```
+    语法 ： sample_frac(tbl, size = 1, replace = FALSE, weight = NULL,.env = parent.frame())
+```{r}
+#默认size=1，相当于对全部数据无重复重新抽样
+sample_frac(mtcars)
+#随机无重复的取10%的数据
+sample_frac(mtcars, 0.1)
+#随机有重复的取总行数1.5倍的数据
+sample_frac(mtcars, 1.5, replace = TRUE)
+#随机无重复的以1/mpg值做权重取10%的数据
+sample_frac(mtcars, 0.1, weight = 1 / mpg)
+```
+9. 分组: group
+
+  group_by()用于对数据集按照给定变量分组，返回分组后的数据集。对返回后的数据集使用以上介绍的函数时，会自动的对分组数据操作。
+
+  **语法 ：group_by(.data, ..., add = FALSE)**    
+```{r}
+#使用变量cyl对mtcars分组，返回分组后数据集
+by_cyl <- group_by(mtcars, cyl)
+#返回每个分组中最大disp所在的行
+filter(by_cyl, disp == max(disp))
+#返回每个分组中变量名包含d的列，始终返回分组列cyl
+select(by_cyl, contains("d"))
+#使用mpg对每个分组排序
+arrange(by_cyl,  mpg)
+#对每个分组无重复的取2行记录
+sample_n(by_cyl, 2)
+```
+语法 ：group_indices(.data, ...)
+返回分组后，每条记录的分组id。
+```{r}
+#返回每条记录所在分组id组成的向量
+group_indices(mtcars, cyl)
+
+```
+语法 ： group_size(x)
+        n_groups(x)
+```{r}
+by_cyl <- group_by(mtcars, cyl)
+#返回每个分组记录数组成的向量
+summarise(by_cyl, n())
+
+#返回所分的组数
+n_groups(by_cyl)
+
+```
+ 对数据集的每个分组计数，类似于base:: table()函数。其中count已经过group_by分组，而tally需要对数据集调用group_by后对分组数据计数。
+语法 ：tally(x, wt, sort = FALSE)
+       count(x, ..., wt =NULL, sort = FALSE)
+```{r}
+#使用count对分组计数，数据已按变量分组
+count(mtcars, cyl)
+#设置sort=TRUE，对分组计数按降序排序
+count(mtcars, cyl, sort = TRUE)
+#使用tally对分组计数，需要使用group_by分组
+tally(group_by(mtcars, cyl))
+#使用summarise对分组计数
+summarise(group_by(mtcars, cyl), n())
+```
+```{r}
+#按cyl分组，并对分组数据计算变量的gear的和
+count(mtcars, cyl, wt = gear)
+tally(group_by(mtcars, cyl), wt = gear)
+```
+10. 数据关联：join
+  数据框中经常需要将多个表进行连接操作, 如左连接、右连接、内连接等，dplyr包也提供了数据集的连接操作，类似于 base::merge() 函数。语法如下：
+  
+**内连接，合并数据仅保留匹配的记录**
+
+inner_join(x,y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
+
+**左连接，向数据集x中加入匹配的数据集y记录**
+
+left_join(x,y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
+
+**右连接，向数据集y中加入匹配的数据集x记录**
+
+right_join(x,y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
+
+**全连接，合并数据保留所有记录，所有行**
+
+full_join(x,y, by = NULL, copy = FALSE, suffix = c(".x", ".y"), ...)
+
+**返回能够与y表匹配的x表所有记录**
+
+semi_join(x,y, by = NULL, copy = FALSE, ...)
+
+**返回无法与y表匹配的x表的所有记录**
+
+anti_join(x, y, by = NULL, copy = FALSE, ...)
+by设置两个数据集用于匹配的字段名，默认使用全部同名字段进行匹配，如果两个数据集需要匹配的字段名不同，可以直接用等号指定匹配的字段名，如， by = c("a" = "b")，表示用x.a和y.b进行匹配。如果两个数据集来自不同的数据源，copy设置为TRUE时，会把数据集y的数据复制到数据集x中，出于性能上的考虑，需要谨慎设置copy参数为TRUE。合并后的数据集中同名变量，会自动添加suffix中设置的后缀加以区分。
+```{r}
+df1 = data.frame(CustomerId=c(1:6), sex = c("f", "m", "f", "f", "m", "m"), Product=c(rep("Toaster",3), rep("Radio",3)))
+df2 = data.frame(CustomerId=c(2,4,6,7),sex = c( "m", "f", "m", "f"), State=c(rep("Alabama",3), rep("Ohio",1)))
+#内连接，默认使用"CustomerId"和"sex"连接
+inner_join(df1, df2)
+#左连接，默认使用"CustomerId"和"sex"连接
+left_join(df1, df2)
+#右连接，默认使用"CustomerId"和"sex"连接
+right_join(df1, df2)
+#全连接，默认使用"CustomerId"和"sex"连接
+full_join(df1, df2)
+#内连接，使用"CustomerId"连接，同名字段sex会自动添加后缀
+inner_join(df1, df2, by = c("CustomerId" = "CustomerId"))
+#以CustomerId连接，返回df1中与df2匹配的记录
+semi_join(df1, df2, by = c("CustomerId" = "CustomerId"))
+#以CustomerId和sex连接，返回df1中与df2不匹配的记录
+anti_join(df1, df2)
+```
+11. 集合操作: set
+  dplyr也提供了集合操作函数，实际上是对base包中的集合操作的重写，但是对数据框和其它表格形式的数据操作更加高效。语法如下：
+```{r}
+mtcars$model <- rownames(mtcars)
+first <- mtcars[1:20, ]
+second <- mtcars[10:32, ]
+#取两个集合的交集
+intersect(first, second)
+#取两个集合的并集，并去重
+union(first, second)
+#取两个集合的差集，返回first中存在但second中不存在的记录
+setdiff(first, second)
+#取两个集合的交集，返回second中存在但first中不存在的记录
+setdiff(second, first)
+#取两个集合的交集, 不去重
+union_all(first, second)
+#判断两个集合是否相等，返回TRUE
+setequal(mtcars, mtcars[32:1, ])
+```
+12. 数据合并: bind
+
+dplyr包中也提供了按行/列合并数据集的函数，合并的对象为数据框，也可以是能够转换为数据框的列表。按行合并函数bind_rows()通过列名进行匹配，不匹配的值使用NA替代，类似于base:: rbind()函数。按列合并函数bind_cols()通过行号匹配，因此合并的数据框必须有相同的行数，函数类似于base:: cbind()函数。原数据集行名称会被过滤掉。语法如下:
+    #合并数据集
+
+     combine(...)
+```{r}
+one <- mtcars[1:4, ]
+two <- mtcars[11:14, ]
+#按行合并数据框one和two
+bind_rows(one, two)
+#按行合并元素为数据框的列表
+# bind_rows(list(one, two))
+#按行合并数据框，生成id列指明数据来自的源数据框，id列的值使用数字代替
+bind_rows(list(one, two), .id = "id")
+#按行合并数据框，生成id列指明数据来自的源数据框，id列的值为数据框名
+bind_rows(list(a = one, b = two), .id = "id")
+#按列合并数据框one和two
+bind_cols(one, two)
+```
+```{r}
+#合并数据框，列名不匹配，因此使用NA替代，使用rbind直接报错
+bind_rows(data.frame(x = 1:3), data.frame(y = 1:4))
+```
+     
+```{r}
+#合并因子
+f1 <- factor("a")
+f2 <- factor("b")
+c(f1, f2)
+unlist(list(f1, f2))
+#因子level不同，强制转换为字符型
+combine(f1, f2)
+combine(list(f1, f2))
+```
+13. 条件语句：ifelse
+dplyr包也提供了更加严格的条件操作语句，if_else函数类似于base::ifelse()，不同的是true和false对应的值必须要有相同的类型，这样使得输出类型更容易预测，因此相对而言执行效率更高。
+
+语法 ：if_else(condition,true, false, missing = NULL)
+
+missing值用于替代缺失值。
+```{r}
+x <- c(-5:5, NA)
+#替换所有小于0的元素为NA，为了保持类型一致，因此使用NA_integer_
+if_else(x < 0, NA_integer_, x)
+#使用字符串missing替换原数据中的NA元素
+if_else(x < 0, "negative", "positive", "missing")
+#if_else不支持类型不一致，但是ifelse可以
+ifelse(x < 0, "negative", 1)
+```
+```{r}
+x <- factor(sample(letters[1:5], 10, replace = TRUE))
+#if_else会保留原有数据类型
+if_else(x %in% c("a", "b", "c"), x, factor(NA))
+ifelse(x %in% c("a", "b", "c"), x, factor(NA))
+```
+  case_when语句类似于if/else语句。表达式使用“~”连接，左值LHS为条件语句用于判断满足条件的元素，右值为具有相同类型的替换值，用于替换满足条件的元素。
+```{r}
+#顺序执行各语句对原向量进行替换，因此越普遍的条件需放在最后
+x <- 1:50
+case_when(
+  x %% 35 == 0 ~ "fizz buzz",
+  x %% 5 == 0 ~ "fizz",
+  x %% 7 == 0 ~ "buzz",
+  TRUE ~ as.character(x)
+)
+```
+14. 数据库操作: database
+dplyr也提供了对数据库的连接和操作函数，目前仅支持sqlite, mysql，postgresql以及google bigquery。dplyr可把R代码自动转换为SQL语句，然后在数据库上执行以获取数据。实际的处理过程中，所有的R代码并不是立即执行，而是在实际获取数据的时候，一次性在数据库中执行。下面以sqlite数据库为例。
+
+创建和连接数据库: src_sqlite(path, create = FALSE)
+
+当create为FALSE（默认），path必须为已存在的数据库路径和全名，为TRUE，会根据设置的path创建sqlite数据库。  
+
+详情：https://blog.csdn.net/wltom1985/article/details/54973811
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
