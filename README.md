@@ -1,5 +1,6 @@
 # Fighting Epidemics Game
-### 游戏制作人 (Game Producer)：沈圣海  Shenghai Shen<br>文案策划与地图设计 (Script Writing & Map Design)：王传凯 Chuankai Wang 
+### 项目负责人与游戏制作人：山东大学 沈圣海<br>Project Leader & Game Producer: Shenghai Shen (Shandong University) 
+### 文案策划与地图设计: 中南大学 王传凯<br>Script Writer & Map Designer： Chuankai Wang (Central South University)
 ##### Hello，这里是游戏设计人与制作人沈圣海，很感谢您游玩这款教育类游戏。游戏内容为了趣味性有防疫宣传以外的内容。（彩蛋+隐藏地图剧情）游戏已debug，理论上不存在影响游戏体验的bug。在设计中存在死档的设计。<br>很高兴能以一个开发者的身份分享这一款响应威海市医院与山东大学海洋学院防疫号召的益智类游戏。作为一个获得活动 ***一等奖且广受好评*** 的作品，我十分骄傲的在这里完全开源所有内容。但是，请勿将其用为商业用途！！！
 ##### Hello, this is Shen Shenghai, the game designer and producer, thank you for playing this educational game. The content of the game has been debugged for the sake of fun and there is no content outside of the epidemic prevention propaganda. The game has been debugged and theoretically there is no impact on the gameplay experience.<br>I am delighted to share this puzzle game as a developer that responds to the call for epidemic prevention at Weihai Hospital and Shandong University . As a _First Prize Winner_ of the event and a very _Well-Received Work_, I am proud to fully open source all the content here. However, please do not use it for commercial purposes!Some of the players' comments can be found in the uploaded _Record_ file.
 ---------------------------------------------------------------------------
