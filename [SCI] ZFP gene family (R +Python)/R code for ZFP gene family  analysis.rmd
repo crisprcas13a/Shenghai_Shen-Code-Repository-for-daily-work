@@ -1,0 +1,3423 @@
+---
+title: "Untitled"
+author: "201900700277Wu Zhaoming"
+date: '2022-05-09'
+output: html_document
+---
+
+# install packages
+
+```{r}
+install.packages("ggplot2")
+install.packages("ggtree")
+install.packages("treeio")
+install.packages("tidyverse")
+install.packages("hablar")
+install.packages("gggenes")
+install.packages("patchwork")
+install.packages("ggseqlogo")
+install.packages("forcats")
+install.packages("ggpubr")
+```
+
+
+
+# Load Packages
+```{r}
+library(ggplot2)
+library(ggtree)
+library(treeio)
+library(tidyverse)
+library(hablar)
+library(gggenes)
+library(ggseqlogo)
+library(patchwork)
+library(forcats)
+library(ggpubr)
+```
+## load fasta
+```{r}
+library(seqinr)
+
+all_fasta <- read.fasta('F://ZFP//final//ZFPfamily.txt')
+```
+
+# Chromosome num
+
+## Chr count bar
+```{r}
+chr <- data.frame(
+
+    Chr = c("Un","6D","6B","7B","4D",
+            "6A","7A","2A","2D","4B","2B","7D","1D","4A","1A",
+            "1B","3A","5A","3B","5B","5D","3D"),
+    n = c(3L,7L,8L,8L,9L,9L,9L,10L,
+          10L,10L,11L,11L,12L,13L,14L,15L,17L,17L,18L,
+          18L,18L,22L),
+    group = c("Un","C","B","B","C","A",
+              "A","A","C","B","B","C","C","A","A","B","A",
+              "A","B","B","C","C")
+)
+chr$Chr <- factor(chr$Chr, levels = chr$Chr)
+```
+
+```{r}
+chr %>%
+  ggplot()+
+  aes(x = Chr, y = n, fill = group) +
+  geom_bar(stat = "identity",width = 0.5) +
+  scale_fill_manual(values = list("#42CA8C","#FE9901","#AE00DE","#B11015")) +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_cartesian(ylim = c(0,25)) +
+  labs(x = "Chromosome Name", y = "Number of TaZFPs genes", title = "") +
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.y = element_blank())
+ggsave("F://figue//genes num on chromosome.pdf", plot = last_plot())
+```
+
+
+# Tree
+## ZFPtree
+
+
+
+```{r}
+# ZFPtree <- read.tree("F://ZFP//tree//ZFPfamily.tree")
+ZFPtree <- read.newick("F://ZFP//tree//ZFPfamily_fasttree.nwk",
+                  node.label = "support")
+ZFPgroup <- read.csv("F://ZFP//tree//treegroup_ZFP.csv")
+```
+
+
+
+
+```{r}
+tree <- full_join(ZFPtree, ZFPgroup, by = "label")
+# groupInfo <- split(row.names(ZFPgroup), ZFPgroup$family)
+# tree <- groupOTU(tree, groupInfo)
+```
+ggtree(tree)+
+  geom_tiplab(align = TRUE,
+              fontface=3)+
+  geom_tippoint(aes(color=groupinfo),
+                show.legend = F,
+                size=5)+
+  scale_color_manual(values = c('group1'='#df237b',
+                                'group2'='#11926a'))+
+  xlim(0,3)
+
+```{r}
+index0 =fortify(tree)
+index = subset(index0, isTip)
+index <- index %>% arrange(y) %>% select(label)  # 树分支信息 从下到上
+```
+
+
+```{r}
+ggtree(tree, layout = "rectangular")+
+  geom_tiplab(align=T,size = 1,linesize=.5)+#linetype='dashed', 
+  theme_tree2() +
+  geom_treescale(x=0.5,y=260,color="red")
+ggsave("F://demo_mega.svg",height = 30,width = 6)
+```
+
+
+```{r}
+ZFPtreeplot <- ggtree(tree, layout="rectangular", size=0.5,branch.length = "none", aes(color = family)) + 
+  geom_tiplab(size=1.5, color="gray15", align=T, linetype=3, linesize=0.5, hjust=-0.02) +
+  geom_tippoint(size=1, aes(color = family)) +
+  # geom_text2(aes(subset=!isTip, label=node), hjust=-0.3, size=0.01, color="black") +
+  geom_nodepoint(color="black", size=0.8) + 
+  scale_color_manual(values = c(
+    "CCCH" = "#42CA8C",
+    "PHD" = "#FE9901",
+    "C3HC4" = "#AE00DE",
+    "C2H2" = "#B11015"
+    ), name = "Linkages") +
+  geom_treescale(x=0.5,y=260,color="red") +
+  geom_text(aes(label=support), vjust=-1, hjust = 1, size = 1.75, color = "black") +
+  theme_tree2() +
+  guides(fill = guide_legend(ncol = 4)
+         # color = guide_legend(override.aes = list(size = 2, shape = 15))
+         ) +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 6),
+    legend.title = element_text(size = 7),
+    legend.key.size = unit(0.5,"cm")
+    # legend.position = c(0.08, 0.915),
+    ) +
+  xlim(0,17)
+
+  
+ZFPtreeplot
+
+
+ggsave("F://demo_mega.svg",height = 30,width = 6)
+```
+## preTree
+
+```{r}
+C1 <- read.fasta("F://ZFP//tree//C2H2//ACOT_C2H2_re.txt")
+C1N <- names(C1)
+C2 <- read.fasta("F://ZFP//tree//C3HC4//ACOT_C3HC4_re.txt")
+C2N <- names(C2)
+C3 <- read.fasta("F://ZFP//tree//CCCH//ACOT_CCCH_re.txt")
+C3N <- names(C3)
+C4 <- read.fasta("F://ZFP//tree//PHD//AOPT_PHD_re.txt")
+C4N <- names(C4)
+```
+
+```{r}
+CCCP <- data.frame(C2H2 = c(C1N,rep(0,125)),C3HC4 = c(C2N,rep(0,266)), CCCH = c(C3N,rep(0,99)), PHD = c(C4N,rep(0,38)))
+```
+
+```{r}
+write.csv(CCCP, "F://ZFP//tree//ZFPfamilynames.csv")
+```
+
+
+## C2H2 Tree
+
+```{r}
+# ZFPtree <- read.tree("F://ZFP//tree//ZFPfamily.tree")
+C2H2Tree <- read.newick("F://ZFP//tree//Ta-other//C2H2.nwk",
+                  node.label = "support")
+C2H2group <- read.csv("F://ZFP//tree//Ta-other//C2H2.csv")
+
+```
+
+
+```{r}
+tree1 <- full_join(C2H2Tree, C2H2group, by = "label")
+```
+
+
+```{r}
+library(RColorBrewer)
+tcolor<-colorRampPalette(c("navy", "white", "firebrick3"))(273)
+u <- tree1@data %>% arrange(support) %>% mutate(tcolor) %>% arrange(node)
+as.tibble(u)
+```
+
+
+```{r}
+ggtree(tree1, layout="circular", size=0.5,branch.length = "none", aes(color = family)) + 
+  geom_tiplab(size=1.5, color="gray15", align=T, linetype=3, linesize=0.5, hjust=-0.02) +
+  geom_tippoint(size=1, aes(color = family)) +
+  geom_text2(aes(subset=!isTip, label=node), hjust=-0.3, size=0.01, color="black") +
+  scale_color_manual(values = c(
+    "A. thaliana" = "#42CA8C",
+    "O. sativa" = "#FE9901",
+    "T. dicoccoides" = "#AE00DE",
+    "T. aestivum" = "#B11015"
+    ), name = "Linkages") +
+  geom_nodepoint(color = u$tcolor, size=0.8) +
+
+  # geom_treescale(x=0.5,y=260,color="red") +
+  # geom_text(aes(label=support), vjust=-1, hjust = 1, size = 1.75, color = "black") +
+  # theme_tree2() +
+  guides(fill = guide_legend(ncol = 4)
+         # color = guide_legend(override.aes = list(size = 2, shape = 15))
+         ) +
+  theme_void() +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 6),
+    legend.title = element_text(size = 7),
+    legend.key.size = unit(0.5,"cm")
+    # legend.position = c(0.08, 0.915),
+    )
+ggsave("F://figue//C2H2_NJtree.pdf", plot = last_plot(), width = 8,height = 8)
+```
+
+## C3HC4 Tree
+
+```{r}
+# ZFPtree <- read.tree("F://ZFP//tree//ZFPfamily.tree")
+C3HC4Tree <- read.newick("F://ZFP//tree//Ta-other//C3HC4.nwk",
+                  node.label = "support")
+C3HC4group <- read.csv("F://ZFP//tree//Ta-other//C3HC4.csv")
+
+```
+
+```{r}
+index0 =fortify(C3HC4Tree)
+index = subset(index0, isTip)
+index_1 <- index %>% arrange(desc(y)) %>% select(label)  # 树分支信息 从上到下
+```
+
+```{r}
+tree2 <- full_join(C3HC4Tree, C3HC4group, by = "label")
+```
+
+```{r}
+library(RColorBrewer)
+tcolor<-colorRampPalette(c("navy", "white", "firebrick3"))(length(tree2@data$node))
+u <- tree2@data %>% arrange(support) %>% mutate(tcolor) %>% arrange(node)
+as.tibble(u)
+```
+
+```{r}
+ggtree(tree2, layout="circular", size=0.5,branch.length = "none", aes(color = family)) + 
+  geom_tiplab(size=1.5, color="gray15", align=T, linetype=3, linesize=0.5, hjust=-0.02) +
+  geom_tippoint(size=1, aes(color = family)) +
+  # geom_text2(aes(subset=!isTip, label=node), hjust=-0.3, size=0.01, color="black") +
+  geom_nodepoint(color= u$tcolor, size=0.8) + 
+  scale_color_manual(values = c(
+    "A. thaliana" = "#42CA8C",
+    "O. sativa" = "#FE9901",
+    "T. dicoccoides" = "#AE00DE",
+    "T. aestivum" = "#B11015"
+    ), name = "Linkages") +
+  # geom_treescale(x=0.5,y=260,color="red") +
+  # geom_text(aes(label=support), vjust=-1, hjust = 1, size = 1.75, color = "black") +
+  # theme_tree2() +
+  guides(fill = guide_legend(ncol = 4)
+         # color = guide_legend(override.aes = list(size = 2, shape = 15))
+         ) +
+  theme_void() +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 6),
+    legend.title = element_text(size = 7),
+    legend.key.size = unit(0.5,"cm")
+    # legend.position = c(0.08, 0.915),
+    )
+ggsave("F://figue//C3HC4_NJtree.pdf", plot = last_plot(), width = 8,height = 8)
+```
+## CCCH Tree
+```{r}
+# ZFPtree <- read.tree("F://ZFP//tree//ZFPfamily.tree")
+CCCHTree <- read.newick("F://ZFP//tree//Ta-other//CCCH.nwk",
+                  node.label = "support")
+CCCHgroup <- read.csv("F://ZFP//tree//Ta-other//CCCH.csv")
+
+```
+
+```{r}
+index0 =fortify(CCCHTree)
+index = subset(index0, isTip)
+index_2 <- index %>% arrange(desc(y)) %>% select(label)  # 树分支信息 从上到下
+```
+
+```{r}
+tree3 <- full_join(CCCHTree, CCCHgroup, by = "label")
+```
+
+```{r}
+library(RColorBrewer)
+tcolor<-colorRampPalette(c("navy", "white", "firebrick3"))(length(tree3@data$node))
+u <- tree3@data %>% arrange(support) %>% mutate(tcolor) %>% arrange(node)
+as.tibble(u)
+```
+
+```{r}
+ggtree(tree3, layout="circular", size=0.5,branch.length = "none", aes(color = family)) + 
+  geom_tiplab(size=1.5, color="gray15", align=T, linetype=3, linesize=0.5, hjust=-0.02) +
+  geom_tippoint(size=1, aes(color = family)) +
+  # geom_text2(aes(subset=!isTip, label=node), hjust=-0.3, size=0.01, color="black") +
+  geom_nodepoint(color=u$tcolor, size=0.8) + 
+  scale_color_manual(values = c(
+    "A. thaliana" = "#42CA8C",
+    "O. sativa" = "#FE9901",
+    "T. dicoccoides" = "#AE00DE",
+    "T. aestivum" = "#B11015"
+    ), name = "Linkages") +
+  # geom_treescale(x=0.5,y=260,color="red") +
+  # geom_text(aes(label=support), vjust=-1, hjust = 1, size = 1.75, color = "black") +
+  # theme_tree2() +
+  guides(fill = guide_legend(ncol = 4)
+         # color = guide_legend(override.aes = list(size = 2, shape = 15))
+         ) +
+  theme_void() +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 6),
+    legend.title = element_text(size = 7),
+    legend.key.size = unit(0.5,"cm")
+    # legend.position = c(0.08, 0.915),
+    )
+ggsave("F://figue//CCCH_NJtree.pdf", plot = last_plot(), width = 8,height = 8)
+```
+
+## PHD Tree
+```{r}
+# ZFPtree <- read.tree("F://ZFP//tree//ZFPfamily.tree")
+PHDTree <- read.newick("F://ZFP//tree//Ta-other//PHD.nwk",
+                  node.label = "support")
+PHDgroup <- read.csv("F://ZFP//tree//Ta-other//PHD.csv")
+
+```
+
+```{r}
+index0 =fortify(PHDTree)
+index = subset(index0, isTip)
+index_3 <- index %>% arrange(desc(y)) %>% select(label)  # 树分支信息 从上到下
+```
+
+```{r}
+i <- data.frame(index_1)
+write.csv(i, "F://ZFP//tree//树分组顺序(C3HC4).csv")
+i <- data.frame(index_2)
+write.csv(i, "F://ZFP//tree//树分组顺序(CCCH).csv")
+i <- data.frame(index_3)
+write.csv(i, "F://ZFP//tree//树分组顺序(PHD).csv")
+```
+
+
+```{r}
+tree4 <- full_join(PHDTree, PHDgroup, by = "label")
+```
+
+```{r}
+library(RColorBrewer)
+tcolor<-colorRampPalette(c("navy", "white", "firebrick3"))(length(tree4@data$node))
+u <- tree4@data %>% arrange(support) %>% mutate(tcolor) %>% arrange(node)
+as.tibble(u)
+```
+
+```{r}
+ggtree(tree4, layout="circular", size=0.5,branch.length = "none", aes(color = family)) + 
+  geom_tiplab(size=1.5, color="gray15", align=T, linetype=3, linesize=0.5, hjust=-0.02) +
+  geom_tippoint(size=1, aes(color = family)) +
+  # geom_text2(aes(subset=!isTip, label=node), hjust=-0.3, size=0.01, color="black") +
+  geom_nodepoint(color=u$tcolor, size=0.8) + 
+  scale_color_manual(values = c(
+    "A. thaliana" = "#42CA8C",
+    "O. sativa" = "#FE9901",
+    "T. dicoccoides" = "#AE00DE",
+    "T. aestivum" = "#B11015"
+    ), name = "Linkages") +
+  # geom_treescale(x=0.5,y=260,color="red") +
+  # geom_text(aes(label=support), vjust=-1, hjust = 1, size = 1.75, color = "black") +
+  # theme_tree2() +
+  guides(fill = guide_legend(ncol = 4)
+         # color = guide_legend(override.aes = list(size = 2, shape = 15))
+         ) +
+  theme_void() +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 6),
+    legend.title = element_text(size = 7),
+    legend.key.size = unit(0.5,"cm")
+    # legend.position = c(0.08, 0.915),
+    )
+ggsave("F://figue//PHD_NJtree.pdf", plot = last_plot(), width = 8,height = 8)
+```
+
+# motif
+
+```{r}
+dd <- data.frame()
+n <- 1
+for (i in names(all_fasta)) {
+  a <- lengths(all_fasta[n])
+  vec <- data.frame(seq.id = i, len = a)
+  dd <- rbind(dd, vec)
+  n = n + 1
+}
+as.tibble(dd)
+```
+
+
+```{r}
+motif <- read.csv("F://figue//motif//motif.csv")
+as.tibble(motif)
+ZFP <- read.csv("F://ZFP//final//gene_location_rename information.csv")
+as.tibble(ZFP)
+```
+
+```{r}
+mm <- data.frame()
+for(i in ZFP$proteinID){
+  d <- motif %>% filter(seq.id == i)
+  mm <- rbind(mm,d)
+}
+as.tibble(mm)
+```
+
+```{r}
+mm <- merge(mm, dd,all = T)
+as.tibble(mm)
+new_mm <-data.frame()
+for(i in ZFP$proteinID){
+  d <- mm %>% filter(seq.id == i)
+  m <- cbind(d,new_geneID = rep(ZFP[ZFP$proteinID == i,]$new_geneID, length(d$seq.id)))
+  new_mm <- rbind(new_mm,m)
+}
+as.tibble(new_mm)
+
+# mm %>% distinct(seq.id,.keep_all = T)
+# mm %>% filter(seq.id == "TraesCS7D02G544800.1")
+```
+
+```{r}
+promotif <-  new_mm %>% 
+  # convert(fct(new_geneID,motif)) %>%
+  ggplot() +
+  # scale_fill_manual(values = colors)+
+  geom_linerange(aes(xmin = 0, xmax = len)) +
+  aes(xmin = Start.,xmax = End,y=new_geneID,fill = motif) +
+  geom_gene_arrow(
+                  arrowhead_height = grid::unit(0, "mm"),
+                 arrowhead_width = grid::unit(0,"mm"),
+                 arrow_body_height = grid::unit(2,"mm"))+
+  theme_genes() +
+  scale_y_discrete(limits=index$label)+
+  ylab(NULL)+
+  theme(legend.title = element_blank(),
+        legend.text = element_text(size = 5),
+        legend.position = "bottom",
+        axis.text.y=element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        # panel.grid.major.y = element_blank(),
+        legend.key.width = unit(0.3, "cm"),
+        legend.key.height = unit(0.3, "cm"),
+        axis.ticks.y = element_blank()
+  ) +
+  guides(fill = guide_legend(ncol = 12))
+promotif
+
+ggsave("F://figue//motif//ZFPmotif.svg", plot = last_plot(),width = 6,height = 30)
+
+
+
+```
+
+## 4 motif
+
+### C2H2 motif
+```{r}
+DNA <- read.table("F://figue//motif//C2H2_1_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//C2H2_1_motif.pdf",plot = last_plot(),height = 1,width = 12)
+
+```
+
+
+```{r}
+DNA <- read.table("F://figue//motif//C2H2_2_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//C2H2_2_motif.pdf",plot = last_plot(),height = 1,width = 12)
+```
+
+
+```{r}
+DNA <- read.table("F://figue//motif//C2H2_3_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//C2H2_3_motif.pdf",plot = last_plot(),height = 1,width = 12)
+```
+
+### CCCH motif
+
+```{r}
+DNA <- read.table("F://figue//motif//CCCH_1_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank()
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//CCCH_1_motif.pdf",plot = last_plot(),height = 1,width = 12)
+
+```
+
+```{r}
+DNA <- read.table("F://figue//motif//CCCH_2_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank()
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//CCCH_2_motif.pdf",plot = last_plot(),height = 1,width = 12)
+
+```
+
+```{r}
+DNA <- read.table("F://figue//motif//CCCH_3_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank()
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//CCCH_3_motif.pdf",plot = last_plot(),height = 1,width = 12)
+
+```
+
+
+### C3HC4 motif
+```{r}
+DNA <- read.table("F://figue//motif//C3HC4_1_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank()
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//C3HC4_1_motif.pdf",plot = last_plot(),height = 1,width = 12)
+
+```
+
+```{r}
+DNA <- read.table("F://figue//motif//C3HC4_2_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank()
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//C3HC4_2_motif.pdf",plot = last_plot(),height = 1,width = 12)
+```
+
+```{r}
+DNA <- read.table("F://figue//motif//C3HC4_3_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank()
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//C3HC4_3_motif.pdf",plot = last_plot(),height = 1,width = 12)
+```
+### PHD motif
+
+```{r}
+DNA <- read.table("F://figue//motif//PHD_1_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank()
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//PHD_1_motif.pdf",plot = last_plot(),height = 1,width = 12)
+
+```
+
+```{r}
+DNA <- read.table("F://figue//motif//PHD_2_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank()
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//PHD_2_motif.pdf",plot = last_plot(),height = 1,width = 12)
+```
+
+```{r}
+DNA <- read.table("F://figue//motif//PHD_3_motif.fas")# %>% as.list()
+DNA <- DNA[seq(0,nrow(DNA),2),]
+ggplot()+ 
+  geom_logo(DNA)+
+  theme_bw() +
+  labs(x=NULL,y=NULL)+
+  theme(legend.position='none',
+    # panel.grid.major.y=element_blank(),
+    panel.grid.minor.y=element_blank(),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+    axis.text.x = element_text(angle = 90,vjust = 0.5,size = 7)
+        # axis.text.x = element_blank(),
+        # axis.text.y = element_blank()
+        ) +
+  scale_y_continuous(expand = c(0, 0))
+
+ggsave("F://figue//motif//PHD_3_motif.pdf",plot = last_plot(),height = 1,width = 12)
+```
+
+
+
+
+# Gene localization
+
+## Loading packages
+```{r}
+library(tidyverse)
+```
+
+
+## read data
+```{r}
+loc0 <- read.csv("F://TaChromosome.csv")
+Tagenes <- read.csv("F://Tagenes.csv")
+
+```
+
+
+
+```{r}
+as.tibble(loc0)
+Targetgene <- Tagenes %>% select(Gene.stable.ID,Protein.stable.ID,Exon.stable.ID, X5..UTR.start,X5..UTR.end,Exon.region.start..bp.,Exon.region.end..bp.,X3..UTR.start,X3..UTR.end,Strand)
+as.tibble(Targetgene)
+```
+
+```{r}
+loc <- merge(loc0, Targetgene)
+as.tibble(loc)
+```
+
+
+```{r}
+
+
+
+
+library(seqinr)
+
+all_fasta <- read.fasta('F://ZFP//final//ZFPfamily.txt')
+
+#这一步把名字换成想要的样子
+# names(all_fasta) <- gsub(":.*", "", names(all_fasta))
+
+#选取
+# sub_fasta <- all_fasta[names(all_fasta) %in% target_list$name]
+```
+
+## gene identification
+```{r}
+pfam <- read.csv("F://ZFPfamily.csv")
+as.tibble(pfam)
+```
+
+## df-所有蛋白
+
+``````{r}
+df = data.frame()
+for(i in 1:length(names(all_fasta))){
+  j <-  loc[loc$Protein.stable.ID == names(all_fasta)[i],]
+  ZFPfam = rep(pfam[pfam$proID == names(all_fasta)[i],]$family, length(j$Protein.stable.ID))
+  j <- cbind(j, ZFPfam)
+  df <- rbind(df,j)
+}
+as.tibble(df)
+```
+## df-转录本蛋白
+
+
+```{r}
+
+df_canonical <- df[df$Ensembl.Canonical == 1,]
+df_canonical <- df_canonical %>% distinct(Gene.stable.ID, .keep_all = T) %>% filter(!is.na(Gene.stable.ID))
+as.tibble(df_canonical)
+```
+
+
+## 初步查看
+```{r}
+df_simp <- df %>% distinct(Gene.stable.ID, .keep_all = T)
+df_simp
+```
+
+查看差异 是否存在基因无对应标准转录本的情况
+```{r}
+# redundant <- setdiff(df_simp$Gene.stable.ID,df_canonical$Gene.stable.ID)
+# red_df <- data.frame()
+# for (i in redundant) {
+#   red_df_i <- df[df$Gene.stable.ID == i,]
+#   red_df <- rbind(red_df, red_df_i)
+# }
+# as.tibble(red_df)
+# red_df %>% distinct(Gene.stable.ID, .keep_all = T)
+# red_df %>% distinct(Protein.stable.ID, .keep_all = T)
+```
+
+```{r}
+df_noncanonical <- df[is.na(df$Ensembl.Canonical),]
+df_noncanonical <- df_noncanonical %>% distinct(Protein.stable.ID, .keep_all = T)
+as.tibble(df_noncanonical)
+```
+
+
+## 查看正负链分布情况
+```{r}
+distributed <- data.frame()
+for(i in c("C2H2","C3HC4","CCCH","PHD")){
+  aa <- df_canonical %>% filter(Strand == 1, ZFPfam == i)
+  a <- length(aa$Strand)
+  bb <- df_canonical %>% filter(Strand == -1, ZFPfam == i)
+  b <- length(bb$Strand)
+  d <- data.frame(proteinfamily = rep(i,2),strand = c(1,-1),number = c(a,b))
+  distributed <- rbind(distributed, d)
+}
+as.tibble(distributed)
+
+```
+
+
+## select columns and remove duplicate rows
+
+
+
+
+```{r}
+ZFP <- data.frame(geneID = df$Gene.stable.ID, transcriptID = df$Transcript.stable.ID, proteinID = df$Protein.stable.ID, family = df$ZFPfam, Chro = df$Chromosome.scaffold.name, genefrom = df$Gene.start..bp., geneto = df$Gene.end..bp., canonical = df$Ensembl.Canonical, strand = df$Strand)
+ZFP <- ZFP %>% filter(canonical == 1) %>% distinct(geneID, .keep_all = T)
+as.tibble(ZFP)
+```
+
+
+```{r}
+sub_C2H2 <- ZFP[ZFP$family == "C2H2",]
+as.tibble(sub_C2H2)
+sub_C3HC4 <- ZFP[ZFP$family == "C3HC4",]
+as.tibble(sub_C3HC4)
+sub_PHD <- ZFP[ZFP$family == "PHD",]
+as.tibble(sub_PHD)
+sub_CCCH <- ZFP[ZFP$family == "CCCH",]
+as.tibble(sub_CCCH)
+```
+## 改基因名
+
+```{r}
+ZFP_rename <- data.frame()
+for (i in c("C2H2","C3HC4","PHD","CCCH")) {
+  name <- NULL
+  subPro <- ZFP[ZFP$family == i,]
+  subPro_re <- subPro %>% group_by(Chro) %>% arrange(genefrom) %>% slice(1:length(subPro$geneID))
+  for (n in 1:length(subPro_re$geneID)) {
+    name <- c(name,paste("Ta",i,".",n, sep = ""))
+  }
+  subPro_re <- cbind(subPro_re,new_geneID = name)
+  ZFP_rename <- rbind(ZFP_rename,subPro_re)
+}
+
+color <- c(rep("178,17,22",length(ZFP_rename[ZFP_rename$family == "C2H2",]$family)),rep("175,1,223",length(ZFP_rename[ZFP_rename$family == "C3HC4",]$family)),rep("254,153,1",length(ZFP_rename[ZFP_rename$family == "PHD",]$family)),rep("66,202,140",length(ZFP_rename[ZFP_rename$family == "CCCH",]$family)))
+ZFP_rename <- cbind(ZFP_rename, color = color)
+ZFP_rename
+
+genes <- ZFP_rename$geneID
+```
+## 准备输出
+
+```{r}
+output1 <- data.frame(new_geneID = ZFP_rename$new_geneID, Chromosome = ZFP_rename$Chro, from = ZFP_rename$genefrom, to = ZFP_rename$geneto)
+as.tibble(output1)
+output2 <- data.frame(new_geneID = ZFP_rename$new_geneID, color = ZFP_rename$color)
+as.tibble(output2)
+```
+
+
+
+```{r}
+write.csv(output1, "F://ZFP//final//gene_location.csv")
+write.csv(ZFP_rename, "F://ZFP//final//gene_location_rename information.csv")
+write.csv(output2, "F://genecolor.csv")
+```
+
+
+
+## 改蛋白质名字
+
+
+```{r paged.print=FALSE}
+df_pro <- data.frame(geneID = df$Gene.stable.ID, proID = df$Protein.stable.ID, Chro = df$Chromosome.scaffold.name, family = df$ZFPfam, from = df$Gene.start..bp.)
+df_pro <- df_pro %>% distinct(proID, .keep_all = T) %>% group_by(Chro) %>% arrange(from) %>% slice(1:length(df_pro$geneID))
+as.tibble(df_pro)
+```
+
+
+
+```{r}
+protein = data.frame()
+for(i in 1:length(genes)){
+  j <- df_pro[df_pro$geneID == genes[i],]
+  n <- rep(ZFP_rename$new_geneID[i],length(j$geneID))
+  j <- cbind(j,n = n)
+  m <- 1:length(j$proID)
+  j <- cbind(j, m = m)
+  protein <- rbind(protein,j)
+}
+
+q <- NULL
+output_proID <- data.frame()
+for (i in 1:length(protein$geneID)) {
+  j <- protein[i,]
+  q <- c(q,paste(j$n,".",j$m,sep = ""))
+  
+}
+protein <- cbind(protein,new_proID = q)
+```
+
+
+```{r}
+protein <- protein[-7]
+as.tibble(protein)
+```
+
+```{r}
+write.csv(protein, "F://protein.csv")
+```
+
+
+```{r}
+protein <- read.csv("F://protein.csv")
+protein_change <- protein %>% mutate(proID=fct_relevel(proID,names(all_fasta))) %>% arrange(proID)
+names(all_fasta) <- protein_change$new_proID
+
+```
+
+```{r}
+as.tibble(protein_change)
+```
+
+# Gene structure
+
+```{r}
+as.tibble(df)
+as.tibble(ZFP_rename)
+```
+
+```{r}
+df_rename <- data.frame()
+subZFP_rename <- ZFP_rename %>% select(geneID, new_geneID)
+for(i in subZFP_rename$geneID){
+  j <- df %>% filter(Gene.stable.ID == i)
+  m <- subZFP_rename %>% filter(geneID == i)
+  j <- cbind(j,new_geneID = rep(m$new_geneID,length(j$Gene.stable.ID)))
+  df_rename <- rbind(df_rename, j)
+}
+as.tibble(df_rename)
+```
+
+```{r}
+geneU5EU3 <- data.frame()
+gene_part1 <- df_rename %>% select(Gene.stable.ID,Protein.stable.ID,Exon.stable.ID,ZFPfam,new_geneID,Strand)
+for (i in df_rename$Exon.stable.ID) {
+   j <- df_rename %>% filter(Exon.stable.ID == i)
+
+m <- data.frame(
+   GeneID = rep(j$Gene.stable.ID,3),
+   ProID = rep(j$Protein.stable.ID,3),
+   ExonID = rep(j$Exon.stable.ID,3),
+   strand = rep(j$Strand,3),
+   label = rep(j$new_geneID,3),
+   start = c(j$X5..UTR.start,
+            j$Exon.region.start..bp.,
+            j$X3..UTR.start),
+   end = c(j$X5..UTR.end,
+            j$Exon.region.end..bp.,
+            j$X3..UTR.end),
+   tag = c("UTR5","Exon","UTR3"))
+
+   geneU5EU3 <- rbind(geneU5EU3, m)
+}
+as.tibble(geneU5EU3)
+```
+
+```{r}
+geneU5EU3_0 <- geneU5EU3 %>% filter(!is.na(start)) %>% select(-GeneID, -ProID) %>% group_by(label,tag) %>% arrange(start) %>% filter(tag == "Exon") %>% mutate(len = end[length(label)]-start[1])
+as.tibble(geneU5EU3_0)
+```
+
+
+```{r}
+# geneU5EU3_final <- geneU5EU3_0 %>% group_by(newID, tag) %>% summarise(start = 0,end = end-start)
+geneU5EU3_final <- data.frame()
+for (i in ZFP_rename$new_geneID) {
+  m <- geneU5EU3_0 %>% filter(label == i)
+
+  if(length(m$ExonID) != 1){
+  for (j in 2:length(m$ExonID)) {
+    m$start[j] <- m$start[j] - m$start[1]
+  }
+  for (j in 2:length(m$ExonID)) {
+    m$end[j] <- m$end[j]-m$start[1]
+  }
+  }
+  m$end[1] <- m$end[1] - m$start[1]
+  m$start[1] = 0
+  geneU5EU3_final <- rbind(geneU5EU3_final, m)
+}
+as.tibble(geneU5EU3_final)
+```
+
+## 查看最长和最短基因
+```{r}
+geneU5EU3_final[geneU5EU3_final$len == max(geneU5EU3_final$len),]
+geneU5EU3_final[geneU5EU3_final$len == min(geneU5EU3_final$len),]
+```
+
+
+
+```{r}
+gene <- geneU5EU3_final %>% 
+  convert(fct(label,tag)) %>%
+  ggplot(aes(xmin = start,xmax = end,y=label,fill = tag)) +
+  scale_fill_manual(values = "deepskyblue2")+
+  geom_linerange(aes(xmin = 0, xmax = len), color = "black") +
+  geom_gene_arrow(arrowhead_height = grid::unit(0, "mm"),
+                 arrowhead_width = grid::unit(0,"mm"),
+                 arrow_body_height = grid::unit(2,"mm"), color = "deepskyblue2", width = 0.1)+
+  theme_genes() +
+  scale_y_discrete(limits=index$label)+
+  ylab(NULL)+
+  theme(legend.title = element_blank(),
+        legend.text = element_text(size = 5),
+        legend.position = "bottom",
+        axis.text.y=element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        # panel.grid.major.y = element_blank(),
+        legend.key.width = unit(0.3, "cm"),
+        legend.key.height = unit(0.3, "cm"),
+        axis.ticks.y = element_blank()
+  ) +
+  guides(fill = guide_legend(ncol = 2))
+gene
+ggsave("F://ZFP//genestructure//gene.svg",plot = last_plot(),width = 6,height = 30)
+```
+
+# Tree+gene+motif拼图
+
+```{r}
+ZFPtreeplot+gene+promotif
+  plot_layout(widths = c(1,3))
+ggsave("F://figue//panel.pdf", plot = last_plot(), height = 30, width = 20)
+```
+
+
+
+# Cis-regulatory element & Heatmap
+
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+cis <- read.csv("F://ZFP//cis//envir_related_cis.csv")
+as.tibble(cis)
+```
+
+
+```{r}
+ID <-c("TaC2H2.1","TaC2H2.2","TaC2H2.3",
+                 "TaC2H2.4","TaC2H2.5","TaC2H2.6","TaC2H2.7","TaC2H2.8",
+                 "TaC2H2.9","TaC3HC4.1","TaC3HC4.2","TaC3HC4.3",
+                 "TaC3HC4.4","TaC3HC4.5","TaC3HC4.6","TaC3HC4.7","TaC3HC4.8",
+                 "TaC3HC4.9","TaC3HC4.10","TaC3HC4.11","TaC3HC4.12",
+                 "TaC3HC4.13","TaC3HC4.14","TaC3HC4.15","TaC3HC4.16",
+                 "TaC3HC4.17","TaC3HC4.18","TaC3HC4.19","TaC3HC4.20",
+                 "TaC3HC4.21","TaC3HC4.22","TaC3HC4.23","TaC3HC4.24",
+                 "TaC3HC4.25","TaC3HC4.26","TaC3HC4.27","TaC3HC4.28",
+                 "TaC3HC4.29","TaC3HC4.30","TaC3HC4.31","TaC3HC4.32",
+                 "TaC3HC4.33","TaC3HC4.34","TaC3HC4.35","TaC3HC4.36",
+                 "TaC3HC4.37","TaC3HC4.38","TaCCCH.1","TaCCCH.2","TaCCCH.3",
+                 "TaCCCH.4","TaCCCH.5","TaCCCH.6","TaCCCH.7","TaCCCH.8",
+                 "TaCCCH.9","TaCCCH.10","TaCCCH.11","TaCCCH.12",
+                 "TaCCCH.13","TaCCCH.14","TaCCCH.15","TaCCCH.16","TaCCCH.17",
+                 "TaCCCH.18","TaCCCH.19","TaCCCH.20","TaCCCH.21",
+                 "TaCCCH.22","TaCCCH.23","TaCCCH.24","TaCCCH.25",
+                 "TaCCCH.26","TaCCCH.27","TaCCCH.28","TaCCCH.29","TaCCCH.30",
+                 "TaCCCH.31","TaCCCH.32","TaCCCH.33","TaCCCH.34",
+                 "TaCCCH.35","TaCCCH.36","TaCCCH.37","TaCCCH.38",
+                 "TaCCCH.39","TaCCCH.40","TaCCCH.41","TaCCCH.42","TaCCCH.43",
+                 "TaCCCH.44","TaCCCH.45","TaCCCH.46","TaCCCH.47",
+                 "TaCCCH.48","TaCCCH.49","TaCCCH.50","TaCCCH.51","TaCCCH.52",
+                 "TaCCCH.53","TaCCCH.54","TaCCCH.55","TaCCCH.56",
+                 "TaCCCH.57","TaCCCH.58","TaCCCH.59","TaCCCH.60",
+                 "TaCCCH.61","TaCCCH.62","TaCCCH.63","TaCCCH.64","TaCCCH.65",
+                 "TaCCCH.66","TaCCCH.67","TaCCCH.68","TaCCCH.69",
+                 "TaCCCH.70","TaCCCH.71","TaCCCH.72","TaCCCH.73","TaCCCH.74",
+                 "TaCCCH.75","TaCCCH.76","TaCCCH.77","TaCCCH.78",
+                 "TaCCCH.79","TaPHD.1","TaPHD.2","TaPHD.3","TaPHD.4",
+                 "TaPHD.5","TaPHD.6","TaPHD.7","TaPHD.8","TaPHD.9",
+                 "TaPHD.10","TaPHD.11","TaPHD.12","TaPHD.13","TaPHD.14",
+                 "TaPHD.15","TaPHD.16","TaPHD.17","TaPHD.18","TaPHD.19",
+                 "TaPHD.20","TaPHD.21","TaPHD.22","TaPHD.23",
+                 "TaPHD.24","TaPHD.25","TaPHD.26","TaPHD.27","TaPHD.28",
+                 "TaPHD.29","TaPHD.30","TaPHD.31","TaPHD.32","TaPHD.33",
+                 "TaPHD.34","TaPHD.35","TaPHD.36","TaPHD.37","TaPHD.38",
+                 "TaPHD.39","TaPHD.40","TaPHD.41","TaPHD.42",
+                 "TaPHD.43","TaPHD.44","TaPHD.45","TaPHD.46","TaPHD.47",
+                 "TaPHD.48","TaPHD.49","TaPHD.50","TaPHD.51","TaPHD.52",
+                 "TaPHD.53","TaPHD.54","TaPHD.55","TaPHD.56","TaPHD.57",
+                 "TaPHD.58","TaPHD.59","TaPHD.60","TaPHD.61",
+                 "TaPHD.62","TaPHD.63","TaPHD.64","TaPHD.65","TaPHD.66",
+                 "TaPHD.67","TaPHD.68","TaPHD.69","TaPHD.70","TaPHD.71",
+                 "TaPHD.72","TaPHD.73","TaPHD.74","TaPHD.75","TaPHD.76",
+                 "TaPHD.77","TaPHD.78","TaPHD.79","TaPHD.80",
+                 "TaPHD.81","TaPHD.82","TaPHD.83","TaPHD.84","TaPHD.85",
+                 "TaPHD.86","TaPHD.87","TaPHD.88","TaPHD.89","TaPHD.90",
+                 "TaPHD.91","TaPHD.92","TaPHD.93","TaPHD.94","TaPHD.95",
+                 "TaPHD.96","TaPHD.97","TaPHD.98","TaPHD.99",
+                 "TaPHD.100","TaPHD.101","TaPHD.102","TaPHD.103","TaPHD.104",
+                 "TaPHD.105","TaPHD.106","TaPHD.107","TaPHD.108",
+                 "TaPHD.109","TaPHD.110","TaPHD.111","TaPHD.112",
+                 "TaPHD.113","TaPHD.114","TaPHD.115","TaPHD.116","TaPHD.117",
+                 "TaPHD.118","TaPHD.119","TaPHD.120","TaPHD.121",
+                 "TaPHD.122","TaPHD.123","TaPHD.124","TaPHD.125","TaPHD.126",
+                 "TaPHD.127","TaPHD.128","TaPHD.129","TaPHD.130",
+                 "TaPHD.131","TaPHD.132","TaPHD.133","TaPHD.134",
+                 "TaPHD.135","TaPHD.136","TaPHD.137","TaPHD.138","TaPHD.139",
+                 "TaPHD.140","TaPHD.141","TaPHD.142","TaPHD.143")
+xid <- factor(x = ID,levels = c("TaC2H2.1","TaC2H2.2","TaC2H2.3",
+                 "TaC2H2.4","TaC2H2.5","TaC2H2.6","TaC2H2.7","TaC2H2.8",
+                 "TaC2H2.9","TaC3HC4.1","TaC3HC4.2","TaC3HC4.3",
+                 "TaC3HC4.4","TaC3HC4.5","TaC3HC4.6","TaC3HC4.7","TaC3HC4.8",
+                 "TaC3HC4.9","TaC3HC4.10","TaC3HC4.11","TaC3HC4.12",
+                 "TaC3HC4.13","TaC3HC4.14","TaC3HC4.15","TaC3HC4.16",
+                 "TaC3HC4.17","TaC3HC4.18","TaC3HC4.19","TaC3HC4.20",
+                 "TaC3HC4.21","TaC3HC4.22","TaC3HC4.23","TaC3HC4.24",
+                 "TaC3HC4.25","TaC3HC4.26","TaC3HC4.27","TaC3HC4.28",
+                 "TaC3HC4.29","TaC3HC4.30","TaC3HC4.31","TaC3HC4.32",
+                 "TaC3HC4.33","TaC3HC4.34","TaC3HC4.35","TaC3HC4.36",
+                 "TaC3HC4.37","TaC3HC4.38","TaCCCH.1","TaCCCH.2","TaCCCH.3",
+                 "TaCCCH.4","TaCCCH.5","TaCCCH.6","TaCCCH.7","TaCCCH.8",
+                 "TaCCCH.9","TaCCCH.10","TaCCCH.11","TaCCCH.12",
+                 "TaCCCH.13","TaCCCH.14","TaCCCH.15","TaCCCH.16","TaCCCH.17",
+                 "TaCCCH.18","TaCCCH.19","TaCCCH.20","TaCCCH.21",
+                 "TaCCCH.22","TaCCCH.23","TaCCCH.24","TaCCCH.25",
+                 "TaCCCH.26","TaCCCH.27","TaCCCH.28","TaCCCH.29","TaCCCH.30",
+                 "TaCCCH.31","TaCCCH.32","TaCCCH.33","TaCCCH.34",
+                 "TaCCCH.35","TaCCCH.36","TaCCCH.37","TaCCCH.38",
+                 "TaCCCH.39","TaCCCH.40","TaCCCH.41","TaCCCH.42","TaCCCH.43",
+                 "TaCCCH.44","TaCCCH.45","TaCCCH.46","TaCCCH.47",
+                 "TaCCCH.48","TaCCCH.49","TaCCCH.50","TaCCCH.51","TaCCCH.52",
+                 "TaCCCH.53","TaCCCH.54","TaCCCH.55","TaCCCH.56",
+                 "TaCCCH.57","TaCCCH.58","TaCCCH.59","TaCCCH.60",
+                 "TaCCCH.61","TaCCCH.62","TaCCCH.63","TaCCCH.64","TaCCCH.65",
+                 "TaCCCH.66","TaCCCH.67","TaCCCH.68","TaCCCH.69",
+                 "TaCCCH.70","TaCCCH.71","TaCCCH.72","TaCCCH.73","TaCCCH.74",
+                 "TaCCCH.75","TaCCCH.76","TaCCCH.77","TaCCCH.78",
+                 "TaCCCH.79","TaPHD.1","TaPHD.2","TaPHD.3","TaPHD.4",
+                 "TaPHD.5","TaPHD.6","TaPHD.7","TaPHD.8","TaPHD.9",
+                 "TaPHD.10","TaPHD.11","TaPHD.12","TaPHD.13","TaPHD.14",
+                 "TaPHD.15","TaPHD.16","TaPHD.17","TaPHD.18","TaPHD.19",
+                 "TaPHD.20","TaPHD.21","TaPHD.22","TaPHD.23",
+                 "TaPHD.24","TaPHD.25","TaPHD.26","TaPHD.27","TaPHD.28",
+                 "TaPHD.29","TaPHD.30","TaPHD.31","TaPHD.32","TaPHD.33",
+                 "TaPHD.34","TaPHD.35","TaPHD.36","TaPHD.37","TaPHD.38",
+                 "TaPHD.39","TaPHD.40","TaPHD.41","TaPHD.42",
+                 "TaPHD.43","TaPHD.44","TaPHD.45","TaPHD.46","TaPHD.47",
+                 "TaPHD.48","TaPHD.49","TaPHD.50","TaPHD.51","TaPHD.52",
+                 "TaPHD.53","TaPHD.54","TaPHD.55","TaPHD.56","TaPHD.57",
+                 "TaPHD.58","TaPHD.59","TaPHD.60","TaPHD.61",
+                 "TaPHD.62","TaPHD.63","TaPHD.64","TaPHD.65","TaPHD.66",
+                 "TaPHD.67","TaPHD.68","TaPHD.69","TaPHD.70","TaPHD.71",
+                 "TaPHD.72","TaPHD.73","TaPHD.74","TaPHD.75","TaPHD.76",
+                 "TaPHD.77","TaPHD.78","TaPHD.79","TaPHD.80",
+                 "TaPHD.81","TaPHD.82","TaPHD.83","TaPHD.84","TaPHD.85",
+                 "TaPHD.86","TaPHD.87","TaPHD.88","TaPHD.89","TaPHD.90",
+                 "TaPHD.91","TaPHD.92","TaPHD.93","TaPHD.94","TaPHD.95",
+                 "TaPHD.96","TaPHD.97","TaPHD.98","TaPHD.99",
+                 "TaPHD.100","TaPHD.101","TaPHD.102","TaPHD.103","TaPHD.104",
+                 "TaPHD.105","TaPHD.106","TaPHD.107","TaPHD.108",
+                 "TaPHD.109","TaPHD.110","TaPHD.111","TaPHD.112",
+                 "TaPHD.113","TaPHD.114","TaPHD.115","TaPHD.116","TaPHD.117",
+                 "TaPHD.118","TaPHD.119","TaPHD.120","TaPHD.121",
+                 "TaPHD.122","TaPHD.123","TaPHD.124","TaPHD.125","TaPHD.126",
+                 "TaPHD.127","TaPHD.128","TaPHD.129","TaPHD.130",
+                 "TaPHD.131","TaPHD.132","TaPHD.133","TaPHD.134",
+                 "TaPHD.135","TaPHD.136","TaPHD.137","TaPHD.138","TaPHD.139",
+                 "TaPHD.140","TaPHD.141","TaPHD.142","TaPHD.143"))
+yid <- factor(x = c("3-AF1.binding.site","AAAC-motif",
+                             "ACA-motif","ACE","AE-box","AT1-motif","ATC-motif",
+                             "ATCT-motif","Box 4","Box II","CAG-motif","C-box",
+                             "chs-CMA1a","chs-CMA2a","chs-Unit 1 m1","GA-motif",
+                             "Gap-box","GATA-motif","GATT-motif","G-box",
+                             "GT1-motif","GTGGC-motif","I-box","LAMP-element","L-box",
+                             "MRE","P-box","Pc-CMA2c","sbp-CMA1c","Sp1",
+                             "TCCC-motif","TCT-motif","ARE","CCAAT-box","DRE",
+                             "GC-motif","LTR","MBS","TC-rich repeats",
+                             "WUN-motif"),levels = c("3-AF1.binding.site","AAAC-motif",
+                             "ACA-motif","ACE","AE-box","AT1-motif","ATC-motif",
+                             "ATCT-motif","Box 4","Box II","CAG-motif","C-box",
+                             "chs-CMA1a","chs-CMA2a","chs-Unit 1 m1","GA-motif",
+                             "Gap-box","GATA-motif","GATT-motif","G-box",
+                             "GT1-motif","GTGGC-motif","I-box","LAMP-element","L-box",
+                             "MRE","P-box","Pc-CMA2c","sbp-CMA1c","Sp1",
+                             "TCCC-motif","TCT-motif","ARE","CCAAT-box","DRE",
+                             "GC-motif","LTR","MBS","TC-rich repeats",
+                             "WUN-motif"))
+```
+
+
+
+```{r}
+# ggplot(heat,aes(x = cis_name, y = newID, fill = )) +
+#   geom_rect()
+heat <- cis %>% 
+  group_by(newID, cis_name,xid,yid) %>% 
+  summarise(number = n()) %>%
+  arrange(desc(number))
+
+# 3.查看数量分布，确定配色个数
+summary(heat$number)
+# 最大值为9，所以下面的代码 hcl.colors(9, "RdYlGn")中为9
+
+# 4.画图
+#   ggplot(heat, aes(x = cis_name, y = newID, fill = number)) +
+#   geom_tile(color = 'black') +
+#   geom_text(aes(label = number),col='black',cex = 1.5) +
+#   scale_fill_gradientn(colors = rev(hcl.colors(9, "RdYlGn"))) +
+#   scale_x_discrete(position = "top")+
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 0, vjust=-0.5),
+#         axis.title = element_blank(),
+#         axis.text = element_text(size = 6, color = 'black'),
+#         ) +
+# 
+#   # scale_x_continuous(breaks = seq(1.5, length(heat$cis_name)+0.5, 1), labels = heat$cis_name, expand = c(0,0)) +
+#   # scale_y_continuous(breaks = seq(1.5, length(heat$newID) + 0.5, 1), labels = heat$newID, expand = c(0,0)) +
+#   theme(panel.grid.major.x = element_blank(),
+#         panel.grid.major.y = element_blank(),
+#         panel.ontop = TRUE,
+#         panel.background = element_rect(fill = "transparent"))
+# ggsave("F://heat.svg", plot = last_plot(), width = 6, height = 30)
+
+# 
+# 
+# 
+# heat <- heat %>%
+#   mutate(sepal.id = as.numeric(as.factor(cis_name)),
+#          species.id = as.numeric(as.factor(newID)))
+# 
+# newID <- levels(factor(heat$newID))
+# cis_name <- levels(factor(heat$cis_name))
+
+heatm <- heat %>%
+  ggplot() +
+  geom_rect(aes(xmin = xid, xmax = xid+1, ymin = yid, ymax = yid+1, fill = number)) +
+  geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = rev(hcl.colors(9, "RdYlGn"))) +
+  theme_bw() +
+  scale_x_continuous(breaks = seq(1.5, length(yid)+0.5, 1), labels = yid, expand = c(0,0)) +
+  scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=0.5),
+        axis.title = element_blank(),
+        axis.text = element_text(size = 6, color = 'black'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent"))
+heatm
+ggsave("F://heat.pdf", plot = last_plot(), width = 6, height = 30)
+```
+```{r}
+library(RColorBrewer)
+mycolor<-colorRampPalette(c("deepskyblue3","#42CA8C","#FE9901","#AE00DE","#B11015","black"))(19)
+mycolor
+```
+
+```{r}
+cisplot <- cis %>% 
+  convert(fct(newID,cis_name,label)) %>%
+  ggplot() +
+  scale_fill_manual(values = "deepskyblue2")+
+  geom_linerange(aes(xmin = 0, xmax = 2000), color = "black",width = 0.7) +
+  aes(xmin = start,xmax = end,y=newID,fill = label,color = label) +
+  geom_gene_arrow(
+                 arrowhead_height = grid::unit(0, "mm"),
+                 arrowhead_width = grid::unit(0,"mm"),
+                 arrow_body_height = grid::unit(2,"mm"), width = 0.1)+
+  scale_fill_manual(values = mycolor) +
+  scale_color_manual(values = mycolor) +
+  theme_genes() +
+  scale_y_discrete(limits=ID)+
+  ylab(NULL)+
+  theme(legend.title = element_blank(),
+        legend.text = element_text(size = 5),
+        # legend.position = "bottom",
+        axis.text.y=element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        # panel.grid.major.y = element_blank(),
+        legend.key.width = unit(0.3, "cm"),
+        legend.key.height = unit(0.3, "cm"),
+        axis.ticks.y = element_blank()
+  ) +
+  guides(fill = guide_legend(ncol = 1))
+cisplot
+ggsave("F://cis.pdf", plot = last_plot(), width = 8, height = 30)
+```
+
+## 合并
+
+
+```{r}
+
+heatm+cisplot
+  plot_layout(widths = c(1,2))
+ggsave("F://figue//panel2.pdf", plot = last_plot(), height = 30, width = 14)
+```
+
+## cis bar plot
+
+```{r}
+cisbar <- read.csv("F://ZFP//cis//cis_bar.csv")
+as.tibble(cisbar)
+```
+
+```{r}
+cisbar_sum <- cisbar %>% group_by(cat, item) %>% select(-newID) %>% summarise(n = length(item))
+as.tibble(cisbar_sum)
+```
+
+```{r}
+cisbar_sum %>% 
+  filter(cat == "C2H2") %>% 
+  # filter(n > 10) %>%
+  ggplot() +
+  aes(x = item, y = n, fill = cat) +
+  geom_bar(stat = "identity",width = 0.5) +
+  scale_fill_manual(values = "#42CA8C") +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_cartesian(ylim = c(91.5,96)) +
+  labs(x = "", y = "", title = "C2H2") +
+  theme_classic() +
+  theme(
+    axis.line.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+            plot.margin=unit(c(5.5,5.5,0,8),'pt'),
+    
+    legend.position = "none",
+
+        panel.grid.major.x = element_blank(),
+        plot.title = element_text(hjust = 0.5)
+          ) -> cis_1_1
+cis_1_1
+
+cisbar_sum %>% 
+  filter(cat == "C2H2") %>% 
+  # filter(n > 10) %>%
+  ggplot() +
+  aes(x = item, y = n, fill = cat) +
+  geom_bar(stat = "identity",width = 0.5) +
+  scale_fill_manual(values = "#42CA8C") +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_cartesian(ylim = c(0,21)) +
+  labs(x = "", y = "The number of CAREs", title = "") +
+  theme_classic() +
+  theme(
+    axis.title.y = element_text(size = 8),
+    legend.position = "none",
+        axis.text.x = element_text(angle = 45,size = 8,hjust = 1,vjust = 1),
+        panel.grid.major.x = element_blank(),
+        plot.title = element_text(hjust = 0.5)
+          ) -> cis_1_2
+cis_1_2
+
+cis_1_1 / cis_1_2
+ggsave("F://figue//cis_bar_1.pdf", plot = last_plot(), height = 5, width = 5)
+```
+
+```{r}
+cisbar_sum %>% 
+  filter(cat == "C3HC4") %>% 
+  # filter(n >10) %>%
+  ggplot() +
+  aes(x = item, y = n, fill = cat) +
+  geom_bar(stat = "identity",width = 0.5) +
+  scale_fill_manual(values = "#42CA8C") +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_cartesian(ylim = c(441,460)) +
+  labs(x = "", y = "", title = "C3HC4") +
+  theme_classic() +
+  theme(
+        axis.line.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none",
+        panel.grid.major.x = element_blank(),
+        plot.title = element_text(hjust = 0.5))  -> cis_2_1
+cis_2_1
+
+
+cisbar_sum %>% 
+  filter(cat == "C3HC4") %>% 
+  # filter(n >10) %>%
+  ggplot() +
+  aes(x = item, y = n, fill = cat) +
+  geom_bar(stat = "identity",width = 0.5) +
+  scale_fill_manual(values = "#42CA8C") +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_cartesian(ylim = c(0,63)) +
+  labs(x = "", y = "The number of CAREs", title = "") +
+  theme_classic() +
+  theme(
+        axis.title.y = element_text(size = 8),
+    legend.position = "none",
+        axis.text.x = element_text(angle = 45,size = 8,hjust = 1,vjust = 1),
+        panel.grid.major.x = element_blank(),
+        plot.title = element_text(hjust = 0.5)) -> cis_2_2
+cis_2_2
+
+cis_2_1 / cis_2_2
+# ggsave("F://figue//cis_bar_2.pdf", plot = last_plot(), height = 5, width = 6)
+```
+```{r}
+cisbar_sum %>% 
+  filter(cat == "CCCH") %>% 
+  filter(n >2) %>%
+  ggplot() +
+  aes(x = item, y = n, fill = cat) +
+  geom_bar(stat = "identity",width = 0.5) +
+  scale_fill_manual(values = "#42CA8C") +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_cartesian(ylim = c(849, 860)) +
+  labs(x = "", y = "", title = "CCCH") +
+  theme_classic() +
+  theme(
+    axis.line.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none",
+        panel.grid.major.x = element_blank(),
+        plot.title = element_text(hjust = 0.5)) -> cis_3_1
+cis_3_1
+
+cisbar_sum %>% 
+  filter(cat == "CCCH") %>% 
+  filter(n >2) %>%
+  ggplot() +
+  aes(x = item, y = n, fill = cat) +
+  geom_bar(stat = "identity",width = 0.5) +
+  scale_fill_manual(values = "#42CA8C") +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_cartesian(ylim = c(0, 208)) +
+  labs(x = "", y = "The number of CAREs", title = "") +
+  theme_classic() +
+  theme(
+    axis.title.y = element_text(size = 8),
+    legend.position = "none",
+        axis.text.x = element_text(angle = 45,size = 8,hjust = 1, vjust = 1),
+        panel.grid.major.x = element_blank(),
+        plot.title = element_text(hjust = 0.5)) -> cis_3_2
+cis_3_2
+
+cis_3_1 / cis_3_2
+# ggsave("F://figue//cis_bar_3.pdf", plot = last_plot(), height = 5, width = 6)
+```
+```{r}
+cisbar_sum %>% 
+  filter(cat == "PHD") %>% 
+  filter(n >10) %>%
+  ggplot() +
+  aes(x = item, y = n, fill = cat) +
+  geom_bar(stat = "identity",width = 0.5) +
+  scale_fill_manual(values = "#42CA8C") +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_cartesian(ylim = c(1540, 1650)) +
+  labs(x = "", y = "", title = "PHD") +
+  theme_classic() +
+  theme(
+    axis.line.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.position = "none",
+plot.margin=unit(c(5.5,5.5,0,8),'pt'),
+        panel.grid.major.x = element_blank(),
+        plot.title = element_text(hjust = 0.5)) -> cis_4_1
+cis_4_1
+
+cisbar_sum %>% 
+  filter(cat == "PHD") %>% 
+  filter(n >10) %>%
+  ggplot() +
+  aes(x = item, y = n, fill = cat) +
+  geom_bar(stat = "identity",width = 0.5) +
+  scale_fill_manual(values = "#42CA8C") +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_cartesian(ylim = c(0, 256)) +
+  labs(x = "", y = "The number of CAREs", title = "") +
+  theme_classic() +
+  theme(
+    axis.title.y = element_text(size = 8),
+    legend.position = "none",
+        axis.text.x = element_text(angle = 45,size = 8,hjust = 1),
+        panel.grid.major.x = element_blank(),
+        plot.title = element_text(hjust = 0.5)) -> cis_4_2
+cis_4_2
+
+cis_4_1 / cis_4_2
+# ggsave("F://figue//cis_bar_4.pdf", plot = last_plot(), height = 5, width = 6)
+```
+
+## 合并
+```{r}
+((cis_1_1 / cis_1_2) | (cis_2_1 / cis_2_2)) /((cis_3_1 / cis_3_2) | (cis_4_1 / cis_4_2))
+ggsave("F://figue//cisbar_combined.pdf", plot = last_plot(),height = 10, width = 10)
+```
+
+
+# GO
+
+```{r}
+library(clusterProfiler)
+library(GO.db)
+```
+
+
+```{r}
+TaGO <- read.csv("F://GO//TaGO.csv")
+as.tibble(TaGO)
+BGO <- data.frame(GO = TaGO$GO.term.accession, gene = TaGO$Gene.stable.ID)
+goterms = Term(GOTERM)
+GD = as.data.frame(goterms)
+GD <- data.frame(GO = rownames(GD), Description = GD$goterms)
+```
+```{r}
+Tagene <- read.csv("F://ZFP//final//gene_location_rename information.csv")
+as.tibble(Tagene)
+```
+
+```{r}
+TaGO_gene <- merge(TaGO, Tagene, all = F, by.x = "Protein.stable.ID", by.y = "proteinID")
+as.tibble(TaGO_gene)
+```
+
+```{r}
+TaGO_gene %>% filter(GO.term.accession == "")
+```
+
+
+
+```{r}
+GO <- TaGO_gene %>% select(new_geneID, GO.term.accession, GO.term.definition)
+GO <- data.frame(GO = GO$GO.term.accession,gene = GO$new_geneID)
+as.tibble(GO)
+TaGO_gene %>% select(GO.term.accession) %>% distinct()
+TaGO_gene %>% filter(family == "C2H2")
+```
+
+
+
+
+```{r}
+
+go_enrich <- enricher(Tagene$geneID, pvalueCutoff = 0.05,pAdjustMethod = "BH",TERM2GENE = BGO,TERM2NAME = GD)
+GOresult = as.data.frame(go_enrich)
+as.tibble(GOresult)
+
+```
+
+## GOpie
+```{r}
+library(ggplot2)
+
+# Create Data
+data <- data.frame(
+  group=c("Biological Process", "Molecular Function", "Cellular Component"),
+  value=c(0.786, 0.148, 0.065),
+  label = c("78.6%", "14.8%", "6.5%")
+)
+data <- data %>% 
+  arrange(desc(group)) %>%
+  mutate(prop = value) %>%
+  mutate(ypos = cumsum(prop)- 0.5*prop )
+# Basic piechart
+ggplot(data, aes(x="", y=value, fill=group, color=group)) +
+  geom_bar(stat="identity", width=1) +
+  geom_text(aes(y = ypos, label = label), color = "black", size=4) +
+  scale_fill_manual(values = list(
+        "Biological Process" = "#42CA8C",
+    "Cellular Component" = "#B11015",
+    "Molecular Function" = "#FE9901"
+  )) +
+  scale_color_manual(values = list(
+        "Biological Process" = "#42CA8C",
+    "Cellular Component" = "#B11015",
+    "Molecular Function" = "#FE9901"
+  )) +
+  coord_polar("y", start=0) +
+  theme_void() 
+ggsave("F://figue//GO_2.pdf")
+```
+## hist
+```{r}
+hist <- data.frame(
+    Ontology = c("Biological Process",
+                 "Biological Process","Biological Process",
+                 "Biological Process","Biological Process",
+                 "Biological Process","Biological Process","Biological Process",
+                 "Biological Process","Biological Process",
+                 "Biological Process","Biological Process","Biological Process",
+                 "Biological Process","Cellular Component",
+                 "Cellular Component","Cellular Component","Cellular Component",
+                 "Cellular Component","Cellular Component",
+                 "Cellular Component","Molecular Function",
+                 "Molecular Function","Molecular Function","Molecular Function",
+                 "Molecular Function","Molecular Function",
+                 "Molecular Function","Molecular Function","Molecular Function"),
+    Description = c("cellular process",
+                    "metabolic process",
+                    "cellular macromolecule metabolic process","macromolecule metabolic process",
+                    "primary metabolic process","cellular metabolic process",
+                    "organic substance metabolic process",
+                    "regulation of cellular process","regulation of biological process",
+                    "biological regulation",
+                    "cellular nitrogen compound metabolic process",
+                    "regulation of nitrogen compound metabolic process",
+                    "regulation of cellular metabolic process","nitrogen compound metabolic process",
+                    "intracellular","intracellular part",
+                    "intracellular membrane-bounded organelle",
+                    "membrane-bounded organelle","intracellular organelle","organelle","nucleus",
+                    "binding","metal ion binding","cation binding",
+                    "ion binding","zinc ion binding",
+                    "transition metal ion binding","protein binding",
+                    "heterocyclic compound binding","organic cyclic compound binding"),
+    Number.in.input.list = c(221L,217L,216L,216L,
+                             216L,216L,216L,192L,192L,192L,189L,187L,187L,
+                             195L,216L,212L,209L,209L,209L,209L,197L,
+                             263L,261L,261L,261L,236L,236L,194L,191L,191L),
+    FDR = c(2.5e-07,6.5e-07,
+            4.3e-38,2e-32,4.8e-18,8.8e-16,5.3e-13,3.2e-39,
+            5.3e-32,2.9e-23,2.6e-38,2.5e-86,1.2e-71,1.9e-37,
+            0.00019,0.0012,6.8e-07,7.8e-07,3.1e-06,4e-06,2.9e-39,
+            1.1e-41,6.3e-176,2.9e-173,1e-168,1.5e-219,
+            3.2e-167,1.7e-32,1.2e-27,1.3e-27)
+)
+hist$Description <- factor(hist$Description, levels = hist$Description)
+```
+    "CCCH" = "#42CA8C",
+    "PHD" = "#FE9901",
+    "C3HC4" = "#AE00DE",
+    "C2H2" = "#B11015"
+```{r}
+ggplot(hist,aes(x = Description,y = -log(FDR),fill = Ontology)) +
+  geom_bar(stat = "identity",width = 0.5) +
+  geom_text(aes(label = Number.in.input.list), size = 3.5, vjust = -0.5) +
+  scale_fill_manual(name = "Term text", values = list(
+        "Biological Process" = "#42CA8C",
+    "Cellular Component" = "#B11015",
+    "Molecular Function" = "#FE9901"
+  )) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 7, angle = 45, hjust = 1, vjust = 1),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "bottom"
+        ) +
+  labs(x = "", y = "") +
+  coord_cartesian(ylim = c(0,550)) +
+  scale_y_continuous(expand = c(0, 0)) +
+
+  guides(fill = guide_legend(nrow = 1))
+ggsave("F://figue//GO_1.pdf", plot = last_plot(), height = 6, width = 12)
+```
+## circle
+```{r}
+circle <- data.frame(
+    Term = c("regulation of salicylic acid metabolic process","response to water deprivation",
+             "response to starvation","response to freezing",
+             "regulation of response to water deprivation",
+             "regulation of systemic acquired resistance",
+             "defense response to fungus, incompatible interaction","seed dormancy process",
+             "regulation of development, heterochronic",
+             "plant organ development"),
+    queryitem = c(6L, 26L, 21L, 18L, 6L, 6L, 11L, 11L, 11L, 57L),
+    querytotal = c(263L,263L,263L,263L,263L,
+                   263L,263L,263L,263L,263L),
+    FDR = c(7.4e-06,0.45,3e-04,0.34,
+            0.0032,0.17,0.0029,0.027,1.3e-07,0.00039)
+)
+circle <- circle %>% mutate(ratio = queryitem/querytotal)
+circle$Term <- factor(circle$Term, levels = circle$Term)
+```
+    "CCCH" = "#42CA8C",
+    "PHD" = "#FE9901",
+    "C3HC4" = "#AE00DE",
+    "C2H2" = "#B11015"
+```{r}
+cc <- ggplot(circle) +
+  aes(x = ratio,y = Term, size = queryitem, color = -log(FDR)) +
+  geom_point() +
+  scale_color_gradientn(colors = c("#42CA8C","#B11015")) +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  labs(x = "Rich factor", y ="") +
+  theme(axis.text.y = element_text(size = 7))
+cc
+```
+## point
+```{r}
+pointseg <- data.frame(
+    gene = c("TaPHD.16",
+             "TaPHD.54","TaPHD.33",
+             "TaPHD.79",
+             "TaPHD.39","TaC3HC4.24",
+             "TaC3HC4.26",
+             "TaPHD.7","TaC3HC4.20",
+             "TaPHD.71","TaPHD.59",
+             "TaPHD.9",
+             "TaC3HC4.23","TaPHD.30",
+             "TaPHD.5",
+             "TaC3HC4.19","TaPHD.11",
+             "TaC3HC4.28","TaPHD.46",
+             "TaPHD.22",
+             "TaC3HC4.18","TaC3HC4.27",
+             "TaPHD.1",
+             "TaPHD.25","TaPHD.19",
+             "TaC3HC4.22"),
+    `regulation of salicylic acid metabolic process` = c(0L,0L,0L,1L,
+                                                       0L,0L,0L,0L,0L,
+                                                       1L,1L,1L,0L,0L,
+                                                       1L,0L,0L,0L,0L,
+                                                       0L,0L,0L,1L,0L,
+                                                       0L,0L),
+    `response to water deprivation` = c(1L,1L,1L,1L,
+                                      1L,1L,1L,1L,1L,
+                                      1L,1L,1L,1L,1L,
+                                      1L,1L,1L,1L,1L,
+                                      1L,1L,1L,1L,1L,
+                                      1L,1L),
+    `response to starvation` = c(1L,1L,1L,1L,
+                               1L,0L,0L,1L,0L,
+                               1L,1L,1L,0L,1L,
+                               1L,0L,1L,0L,1L,
+                               1L,0L,0L,1L,1L,
+                               1L,0L),
+    `response to freezing` = c(0L,0L,0L,1L,
+                             0L,0L,0L,0L,0L,
+                             1L,1L,1L,0L,0L,
+                             1L,0L,0L,0L,0L,
+                             0L,0L,0L,1L,0L,
+                             0L,0L),
+    `regulation of response to water deprivation` = c(0L,0L,0L,1L,
+                                                    0L,0L,0L,0L,0L,
+                                                    1L,1L,1L,0L,0L,
+                                                    1L,0L,0L,0L,0L,
+                                                    0L,0L,0L,1L,0L,
+                                                    0L,0L),
+    `regulation of systemic acquired resistance` = c(0L,0L,0L,1L,
+                                                   0L,0L,0L,0L,0L,
+                                                   1L,1L,1L,0L,0L,
+                                                   1L,0L,0L,0L,0L,
+                                                   0L,0L,0L,1L,0L,
+                                                   0L,0L),
+    `defense response to fungus, incompatible interaction` = c(0L,0L,0L,0L,
+                                                               0L,0L,0L,0L,0L,
+                                                               0L,0L,0L,0L,0L,
+                                                               0L,0L,0L,0L,0L,
+                                                               0L,0L,0L,0L,0L,
+                                                               0L,0L),
+    `seed dormancy process` = c(0L,0L,0L,0L,
+                              0L,0L,0L,0L,0L,
+                              0L,0L,0L,0L,0L,
+                              0L,0L,0L,0L,0L,
+                              0L,0L,0L,0L,0L,
+                              0L,0L),
+    `regulation of development, heterochronic` = c(0L,0L,0L,0L,
+                                                   0L,0L,0L,0L,0L,
+                                                   0L,0L,0L,0L,0L,
+                                                   0L,0L,0L,0L,0L,
+                                                   0L,0L,0L,0L,0L,
+                                                   0L,0L),
+    `plant organ development` = c(1L,1L,1L,1L,
+                                1L,0L,0L,1L,0L,
+                                1L,1L,1L,0L,1L,
+                                1L,0L,1L,0L,1L,
+                                1L,0L,0L,1L,1L,
+                                1L,0L)
+)
+```
+
+```{r}
+pointseg1 <- pointseg %>% group_by(gene) %>% gather(term, index, -gene)
+
+pointseg1$term <- rep(c("regulation of salicylic acid metabolic process",
+                        "response to water deprivation",
+                        "response to starvation",
+                        "response to freezing",
+                        "regulation of response to water deprivation",
+                        "regulation of systemic acquired resistance",
+                        "defense response to fungus, incompatible interaction",
+                        "seed dormancy process",
+                        "regulation of development, heterochronic",
+                        "plant organ development"),each = 26)
+
+
+as.tibble(pointseg1)
+```
+
+```{r}
+ps <- ggplot(pointseg1) +
+  aes(x = gene, y = term, color = factor(index)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = list("1" = "#B11015",
+                                  "0" = "#42CA8C")) +
+  scale_y_discrete(limits = circle$Term) +
+  scale_x_discrete(position = "top") +
+  theme_bw() +
+  labs(x = "", y = "") +
+  theme(axis.text.x = element_text(size = 6, angle = 90, hjust = 0),
+        # axis.text.y = element_text(size = 6),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        legend.position = "none")
+ps
+```
+
+
+```{r}
+cc+ps
+  plot_layout(widths = c(1,2))
+ggsave("F://figue//GO_3.pdf", plot = last_plot(), height = 6, width = 12)
+```
+
+# 非生物胁迫表达谱
+
+```{r paged.print=FALSE}
+
+d <- read.csv("F://表达谱//gene expression_heatmap.csv")
+d <- read.csv("F://表达谱//gene expression_heatmap.csv",row.names = d$Category)
+dd <- d[,-1]
+dd <- as.matrix(dd)
+# heatmap(dd,col= colorRampPalette(brewer.pal(8, "Blues"))(100),labRow=paste("",sep=""))
+#载入gplots包；
+library(gplots)
+cmcolor <- cm.colors(256)
+rowcolor <- rainbow(nrow(dd), start = 0, end = 0.3)
+colcolor <- rainbow(ncol(dd), start = 0, end = 0.3)
+#margin使用两个数值分别调整列标签和行标签的空白空间；
+#offsetRow微调横向标签的位置；
+#srtCol设置列标签的角度；
+#adjCol设置列标签的对齐方式；
+heatmap.2(dd, col=cmcolor,
+scale="column",
+key.par=list(cex.main=0.7,
+cex.lab=0.7,
+cex.axis=0.8),
+RowSideColors=rowcolor,
+ColSideColors=colcolor,
+margin=c(5, 8),
+# tracecol="orange",
+offsetRow=-0.1,
+srtCol=45,
+adjCol=c(0.5,1))
+
+```
+
+```{r}
+#设置标签的颜色与色块一致；
+#tracecol=NULL（或者trace="none" ）,隐藏轨迹线；
+#density参数指定图例上绘图类型，默认为'histogram', 也可设为'density'或'none'；
+heatmap.2(dd, 
+col=cmcolor,
+# cexRow = paste("",sep=""),
+scale="column",
+RowSideColors=rowcolor,
+ColSideColors=colcolor,
+key.par=list(cex.main=0.7,
+cex.lab=0.7,
+cex.axis=0.8
+),
+margin=c(5, 8),
+trace="none",
+tracecol="purple",
+density="density",
+# colRow=rowcolor,
+# colCol=colcolor,
+offsetRow=-0.1,
+srtCol=45,
+
+adjCol=c(0.5,1)
+)
+
+```
+
+```{r}
+# library(psych)
+library(pheatmap)
+```
+
+```{r}
+
+pdf("F://heatmap only for drought.pdf",width = 30,height = 10)
+pheatmap(dd)
+dev.off()
+```
+```{r}
+
+d <- read.csv("F://表达谱//gene expression tissue.csv",row.names = d$Category)
+dd <- d[,-1]
+dd <- as.matrix(dd)
+data <- dd
+
+```
+
+
+
+
+```{r}
+library(vegan)
+data.1 <- decostand(data,"standardize",MARGIN = 1)
+# data.1 <- as.data.frame(scale(data))#第二种方法，但是这个默认是对列进行处理
+View(data.1)
+#c查看其标准差
+apply(data.1,1,mean) 
+pheatmap(data.1)
+pheatmap(data)
+```
+
+```{r}
+pdf("F://heatmap for drought&tissue.pdf",width = 30,height = 10)
+pheatmap(data.1)
+dev.off()
+```
+
+
+## 数据前期处理
+
+```{r}
+index <- data.frame(
+    gene = c("TaC2H2.7","TaC2H2.5",
+             "TaC2H2.6","TaC2H2.8","TaC2H2.9","TaC2H2.3","TaC2H2.1",
+             "TaC2H2.2","TaC2H2.4","TaC3HC4.26","TaC3HC4.22",
+             "TaC3HC4.18","TaC3HC4.27","TaC3HC4.23","TaC3HC4.19",
+             "TaC3HC4.20","TaC3HC4.28","TaC3HC4.24","TaC3HC4.2","TaC3HC4.25",
+             "TaC3HC4.29","TaC3HC4.21","TaC3HC4.13","TaC3HC4.17",
+             "TaC3HC4.11","TaC3HC4.3","TaC3HC4.1","TaC3HC4.32",
+             "TaC3HC4.30","TaC3HC4.34","TaC3HC4.4","TaC3HC4.6",
+             "TaC3HC4.5","TaC3HC4.16","TaC3HC4.8","TaC3HC4.14",
+             "TaC3HC4.15","TaC3HC4.10","TaC3HC4.9","TaC3HC4.12",
+             "TaC3HC4.7","TaC3HC4.35","TaC3HC4.31","TaC3HC4.33","TaC3HC4.36",
+             "TaC3HC4.37","TaC3HC4.38","TaCCCH.33","TaCCCH.48",
+             "TaCCCH.40","TaCCCH.32","TaCCCH.41","TaCCCH.49",
+             "TaCCCH.53","TaCCCH.45","TaCCCH.37","TaCCCH.62","TaCCCH.60",
+             "TaCCCH.57","TaCCCH.51","TaCCCH.34","TaCCCH.42",
+             "TaCCCH.16","TaCCCH.8","TaCCCH.22","TaCCCH.11",
+             "TaCCCH.26","TaCCCH.23","TaCCCH.28","TaCCCH.1","TaCCCH.17",
+             "TaCCCH.30","TaCCCH.46","TaCCCH.38","TaCCCH.4",
+             "TaCCCH.18","TaCCCH.12","TaCCCH.27","TaCCCH.24","TaCCCH.29",
+             "TaCCCH.72","TaCCCH.75","TaCCCH.78","TaCCCH.68",
+             "TaCCCH.70","TaCCCH.66","TaCCCH.65","TaCCCH.67",
+             "TaCCCH.69","TaCCCH.71","TaCCCH.77","TaCCCH.74","TaCCCH.61",
+             "TaCCCH.58","TaCCCH.63","TaCCCH.25","TaCCCH.76",
+             "TaCCCH.73","TaCCCH.79","TaCCCH.6","TaCCCH.14","TaCCCH.20",
+             "TaCCCH.3","TaCCCH.15","TaCCCH.7","TaCCCH.21",
+             "TaCCCH.43","TaCCCH.50","TaCCCH.35","TaCCCH.10","TaCCCH.9",
+             "TaCCCH.2","TaCCCH.55","TaCCCH.56","TaCCCH.54",
+             "TaCCCH.19","TaCCCH.13","TaCCCH.5","TaCCCH.52","TaCCCH.36",
+             "TaCCCH.44","TaCCCH.59","TaCCCH.64","TaCCCH.39",
+             "TaCCCH.31","TaCCCH.47","TaPHD.129","TaPHD.132",
+             "TaPHD.56","TaPHD.81","TaPHD.74","TaPHD.26","TaPHD.18",
+             "TaPHD.31","TaPHD.24","TaPHD.89","TaPHD.99","TaPHD.109",
+             "TaPHD.119","TaPHD.122","TaPHD.114","TaPHD.28",
+             "TaPHD.14","TaPHD.110","TaPHD.90","TaPHD.100","TaPHD.126",
+             "TaPHD.130","TaPHD.138","TaPHD.49","TaPHD.45",
+             "TaPHD.53","TaPHD.38","TaPHD.69","TaPHD.77","TaPHD.61",
+             "TaPHD.75","TaPHD.63","TaPHD.67","TaPHD.97","TaPHD.108",
+             "TaPHD.87","TaPHD.128","TaPHD.133","TaPHD.140",
+             "TaPHD.112","TaPHD.102","TaPHD.10","TaPHD.6","TaPHD.2",
+             "TaPHD.142","TaPHD.65","TaPHD.143","TaPHD.66","TaPHD.125",
+             "TaPHD.135","TaPHD.134","TaPHD.25","TaPHD.19",
+             "TaPHD.33","TaPHD.16","TaPHD.30","TaPHD.22","TaPHD.11",
+             "TaPHD.7","TaPHD.3","TaPHD.39","TaPHD.46","TaPHD.54",
+             "TaPHD.76","TaPHD.62","TaPHD.68","TaPHD.94","TaPHD.105",
+             "TaPHD.84","TaPHD.60","TaPHD.78","TaPHD.70",
+             "TaPHD.15","TaPHD.29","TaPHD.21","TaPHD.131","TaPHD.139",
+             "TaPHD.127","TaPHD.72","TaPHD.58","TaPHD.50","TaPHD.35",
+             "TaPHD.42","TaPHD.48","TaPHD.41","TaPHD.34",
+             "TaPHD.85","TaPHD.106","TaPHD.95","TaPHD.136","TaPHD.86",
+             "TaPHD.107","TaPHD.96","TaPHD.17","TaPHD.32","TaPHD.23",
+             "TaPHD.101","TaPHD.111","TaPHD.91","TaPHD.64",
+             "TaPHD.120","TaPHD.116","TaPHD.123","TaPHD.73","TaPHD.80",
+             "TaPHD.57","TaPHD.20","TaPHD.13","TaPHD.27",
+             "TaPHD.37","TaPHD.52","TaPHD.44","TaPHD.137","TaPHD.117",
+             "TaPHD.124","TaPHD.121","TaPHD.98","TaPHD.88",
+             "TaPHD.104","TaPHD.83","TaPHD.93","TaPHD.92","TaPHD.103",
+             "TaPHD.82","TaPHD.43","TaPHD.36","TaPHD.51","TaPHD.8",
+             "TaPHD.12","TaPHD.4","TaPHD.115","TaPHD.118","TaPHD.113",
+             "TaPHD.141","TaPHD.55","TaPHD.47","TaPHD.40",
+             "TaPHD.5","TaPHD.9","TaPHD.1","TaPHD.59","TaPHD.79",
+             "TaPHD.71"),
+    group = c("I","I","I","II","II",
+              "III","IV","IV","IV","I","I","I","I","I","I","I",
+              "I","I","II","III","III","III","III","III","III",
+              "IV","IV","V","V","V","V","V","V","VI","VI",
+              "VI","VI","VI","VI","VI","VI","VI","VI","VI","VII",
+              "VII","VII","I","I","I","I","I","I","I","I",
+              "I","I","I","I","II","II","II","II","II","II",
+              "II","III","III","III","III","III","IV","IV","IV",
+              "V","V","V","VI","VI","VI","VI","VI","VI","VI",
+              "VI","VI","VI","VI","VI","VII","VII","VII","VIII",
+              "VIII","VIII","VIII","IX","IX","IX","X","X","X",
+              "X","X","X","X","X","X","X","X","X","X","X",
+              "X","X","XI","XI","XI","XI","XI","XI","XI","XI",
+              "XII","XII","XII","I","I","I","I","I","I","I",
+              "I","I","I","I","I","II","II","II","II","II",
+              "II","II","II","II","II","II","II","III","III",
+              "III","III","III","III","III","III","III","III","III",
+              "III","III","III","III","IV","IV","IV","IV",
+              "IV","IV","IV","IV","IV","IV","IV","IV","IV","IV",
+              "IV","IV","IV","IV","IV","IV","IV","IV","IV",
+              "IV","IV","IV","IV","V","V","V","V","V","V","V",
+              "V","V","VI","VI","VI","VI","VI","VII","VII",
+              "VII","VII","VII","VII","VII","VII","VII","VII",
+              "VIII","VIII","VIII","VIII","VIII","VIII","VIII","VIII",
+              "VIII","IX","IX","IX","IX","X","X","X","X","X",
+              "X","X","X","X","X","X","X","X","XI","XI",
+              "XI","XI","XI","XI","XI","XI","XII","XII","XII",
+              "XII","XII","XII","XII","XIII","XIII","XIII","XIII",
+              "XIII","XIII","XIV","XIV","XIV","XIV","XIV","XIV")
+)
+```
+
+
+```{r}
+# 新数据
+dftis_new <- read.csv("F://表达谱//diff tissue.csv")
+dftrt_new <- read.csv("F://表达谱//diff treatment.csv")
+# 旧数据
+dftis <- read.csv("F://表达谱//gene expression tissue.csv")
+dftrt <- read.csv("F://表达谱//gene expression_heatmap re.csv")
+```
+
+```{r}
+as.tibble(dftis_new)
+```
+
+```{r}
+dftis_new_op <- {}
+for(i in 2:25){
+  col2 <- dftis_new[,i]
+  col2name <- colnames(dftis_new)[i]
+  gene <- dftis_new[,1]
+  d <- data.frame(gene = gene, Category = rep(col2name, 269), value = col2)
+  dftis_new_op <- rbind(dftis_new_op, d)
+  
+  
+}
+dftis_new_op <- merge(dftis_new_op, index, by = "gene")
+dftis_new_op <- dftis_new_op %>%
+  arrange(gene,Category) %>%
+  mutate(xid = rep(1:269, each = 24), yid = rep(1:24, 269)) %>%
+  as.tibble()
+
+dftis_new_op
+
+```
+
+```{r}
+dftrt_new_op <- {}
+for(i in 2:8){
+  col2 <- dftrt_new[,i]
+  col2name <- colnames(dftrt_new)[i]
+  gene <- dftrt_new[,1]
+  d <- data.frame(gene = gene, Category = rep(col2name, 269), value = col2)
+  dftrt_new_op <- rbind(dftrt_new_op, d)
+  
+  
+}
+as.tibble(dftrt_new_op)
+dftrt_new_op <- merge(dftrt_new_op, index, by = "gene")
+dftrt_new_op <- dftrt_new_op %>%
+  arrange(gene,Category) %>%
+  mutate(xid = rep(1:269, each = 7), yid = rep(1:7, 269)) %>%
+  as.tibble()
+dftrt_new_op
+
+
+
+```
+### 输出
+
+```{r}
+write.csv(dftis_new_op, "F://表达谱//diff tissue_new.csv")
+write.csv(dftrt_new_op,"F://表达谱//diff treatment_new.csv")
+```
+
+
+
+## 一般水平 干旱胁迫对照 表达谱
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(patchwork)
+```
+
+
+
+```{r}
+ID <-c("TaC2H2.1","TaC2H2.2","TaC2H2.3",
+                 "TaC2H2.4","TaC2H2.5","TaC2H2.6","TaC2H2.7","TaC2H2.8",
+                 "TaC2H2.9","TaC3HC4.1","TaC3HC4.2","TaC3HC4.3",
+                 "TaC3HC4.4","TaC3HC4.5","TaC3HC4.6","TaC3HC4.7","TaC3HC4.8",
+                 "TaC3HC4.9","TaC3HC4.10","TaC3HC4.11","TaC3HC4.12",
+                 "TaC3HC4.13","TaC3HC4.14","TaC3HC4.15","TaC3HC4.16",
+                 "TaC3HC4.17","TaC3HC4.18","TaC3HC4.19","TaC3HC4.20",
+                 "TaC3HC4.21","TaC3HC4.22","TaC3HC4.23","TaC3HC4.24",
+                 "TaC3HC4.25","TaC3HC4.26","TaC3HC4.27","TaC3HC4.28",
+                 "TaC3HC4.29","TaC3HC4.30","TaC3HC4.31","TaC3HC4.32",
+                 "TaC3HC4.33","TaC3HC4.34","TaC3HC4.35","TaC3HC4.36",
+                 "TaC3HC4.37","TaC3HC4.38","TaCCCH.1","TaCCCH.2","TaCCCH.3",
+                 "TaCCCH.4","TaCCCH.5","TaCCCH.6","TaCCCH.7","TaCCCH.8",
+                 "TaCCCH.9","TaCCCH.10","TaCCCH.11","TaCCCH.12",
+                 "TaCCCH.13","TaCCCH.14","TaCCCH.15","TaCCCH.16","TaCCCH.17",
+                 "TaCCCH.18","TaCCCH.19","TaCCCH.20","TaCCCH.21",
+                 "TaCCCH.22","TaCCCH.23","TaCCCH.24","TaCCCH.25",
+                 "TaCCCH.26","TaCCCH.27","TaCCCH.28","TaCCCH.29","TaCCCH.30",
+                 "TaCCCH.31","TaCCCH.32","TaCCCH.33","TaCCCH.34",
+                 "TaCCCH.35","TaCCCH.36","TaCCCH.37","TaCCCH.38",
+                 "TaCCCH.39","TaCCCH.40","TaCCCH.41","TaCCCH.42","TaCCCH.43",
+                 "TaCCCH.44","TaCCCH.45","TaCCCH.46","TaCCCH.47",
+                 "TaCCCH.48","TaCCCH.49","TaCCCH.50","TaCCCH.51","TaCCCH.52",
+                 "TaCCCH.53","TaCCCH.54","TaCCCH.55","TaCCCH.56",
+                 "TaCCCH.57","TaCCCH.58","TaCCCH.59","TaCCCH.60",
+                 "TaCCCH.61","TaCCCH.62","TaCCCH.63","TaCCCH.64","TaCCCH.65",
+                 "TaCCCH.66","TaCCCH.67","TaCCCH.68","TaCCCH.69",
+                 "TaCCCH.70","TaCCCH.71","TaCCCH.72","TaCCCH.73","TaCCCH.74",
+                 "TaCCCH.75","TaCCCH.76","TaCCCH.77","TaCCCH.78",
+                 "TaCCCH.79","TaPHD.1","TaPHD.2","TaPHD.3","TaPHD.4",
+                 "TaPHD.5","TaPHD.6","TaPHD.7","TaPHD.8","TaPHD.9",
+                 "TaPHD.10","TaPHD.11","TaPHD.12","TaPHD.13","TaPHD.14",
+                 "TaPHD.15","TaPHD.16","TaPHD.17","TaPHD.18","TaPHD.19",
+                 "TaPHD.20","TaPHD.21","TaPHD.22","TaPHD.23",
+                 "TaPHD.24","TaPHD.25","TaPHD.26","TaPHD.27","TaPHD.28",
+                 "TaPHD.29","TaPHD.30","TaPHD.31","TaPHD.32","TaPHD.33",
+                 "TaPHD.34","TaPHD.35","TaPHD.36","TaPHD.37","TaPHD.38",
+                 "TaPHD.39","TaPHD.40","TaPHD.41","TaPHD.42",
+                 "TaPHD.43","TaPHD.44","TaPHD.45","TaPHD.46","TaPHD.47",
+                 "TaPHD.48","TaPHD.49","TaPHD.50","TaPHD.51","TaPHD.52",
+                 "TaPHD.53","TaPHD.54","TaPHD.55","TaPHD.56","TaPHD.57",
+                 "TaPHD.58","TaPHD.59","TaPHD.60","TaPHD.61",
+                 "TaPHD.62","TaPHD.63","TaPHD.64","TaPHD.65","TaPHD.66",
+                 "TaPHD.67","TaPHD.68","TaPHD.69","TaPHD.70","TaPHD.71",
+                 "TaPHD.72","TaPHD.73","TaPHD.74","TaPHD.75","TaPHD.76",
+                 "TaPHD.77","TaPHD.78","TaPHD.79","TaPHD.80",
+                 "TaPHD.81","TaPHD.82","TaPHD.83","TaPHD.84","TaPHD.85",
+                 "TaPHD.86","TaPHD.87","TaPHD.88","TaPHD.89","TaPHD.90",
+                 "TaPHD.91","TaPHD.92","TaPHD.93","TaPHD.94","TaPHD.95",
+                 "TaPHD.96","TaPHD.97","TaPHD.98","TaPHD.99",
+                 "TaPHD.100","TaPHD.101","TaPHD.102","TaPHD.103","TaPHD.104",
+                 "TaPHD.105","TaPHD.106","TaPHD.107","TaPHD.108",
+                 "TaPHD.109","TaPHD.110","TaPHD.111","TaPHD.112",
+                 "TaPHD.113","TaPHD.114","TaPHD.115","TaPHD.116","TaPHD.117",
+                 "TaPHD.118","TaPHD.119","TaPHD.120","TaPHD.121",
+                 "TaPHD.122","TaPHD.123","TaPHD.124","TaPHD.125","TaPHD.126",
+                 "TaPHD.127","TaPHD.128","TaPHD.129","TaPHD.130",
+                 "TaPHD.131","TaPHD.132","TaPHD.133","TaPHD.134",
+                 "TaPHD.135","TaPHD.136","TaPHD.137","TaPHD.138","TaPHD.139",
+                 "TaPHD.140","TaPHD.141","TaPHD.142","TaPHD.143")
+xid <- factor(x = ID,levels = ID)
+yid <- factor(x = c("Control","Drought&heat 1h","Drought&heat 6h","Drought 1h","Drought 6h", "Heat 1h", "Heat 6h"),
+              levels = c("Control","Drought&heat 1h","Drought&heat 6h","Drought 1h","Drought 6h", "Heat 1h", "Heat 6h"))
+zid <- factor(x = c("Atay85_Control_Grain","Atay85_Control_Leaf","Atay85_Control_Root",
+                         "Atay85_Drought&heat_Grain","Atay85_Drought&heat_Leaf","Atay85_Drought&heat_Root",
+                    "Atay85_Drought_Grain","Atay85_Drought_Leaf","Atay85_Drought_Root",
+                    "Atay85_Heat_Grain","	Atay85_Heat_Leaf","Atay85_Heat_Root",
+                    "Zubkov_Control_Grain","Zubkov_Control_Leaf","Zubkov_Control_Root",
+                    "Zubkov_Drought&heat_Grain","Zubkov_Drought&heat_Leaf","Zubkov_Drought&heat_Root",
+                    "Zubkov_Drought_Grain","Zubkov_Drought_Leaf","Zubkov_Drought_Root",
+                    "Zubkov_Heat_Grain","Zubkov_Heat_Leaf","Zubkov_Heat_Root"),
+              levels = c("Atay85_Control_Grain","Atay85_Control_Leaf","Atay85_Control_Root",
+                         "Atay85_Drought&heat_Grain","Atay85_Drought&heat_Leaf","Atay85_Drought&heat_Root",
+                    "Atay85_Drought_Grain","Atay85_Drought_Leaf","Atay85_Drought_Root",
+                    "Atay85_Heat_Grain","	Atay85_Heat_Leaf","Atay85_Heat_Root",
+                    "Zubkov_Control_Grain","Zubkov_Control_Leaf","Zubkov_Control_Root",
+                    "Zubkov_Drought&heat_Grain","Zubkov_Drought&heat_Leaf","Zubkov_Drought&heat_Root",
+                    "Zubkov_Drought_Grain","Zubkov_Drought_Leaf","Zubkov_Drought_Root",
+                    "Zubkov_Heat_Grain","Zubkov_Heat_Leaf","Zubkov_Heat_Root"))
+```
+
+
+
+```{r}
+
+data <- read.csv("G://表达谱//diff tissue_new.csv")
+as.tibble(data)
+```
+
+```{r}
+data <- read.csv("G://表达谱//diff treatment_new.csv")
+data$value <- log10(data$value)
+exp_treattime <- data %>%
+  group_by(gene, Category,xid,yid) %>%
+  # summarise(number = n()) %>%
+  # arrange(desc(number))
+  ggplot() +
+  geom_rect(aes(ymin = xid, ymax = xid+1, xmin = yid, xmax = yid+1, fill = value)) +
+  # geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) + # rev(hcl.colors(9, "RdYlGn"))
+  theme_bw() +
+  scale_x_continuous(breaks = seq(1.5, length(yid)+0.5, 1), labels = yid, expand = c(0,0), position = "top") +
+  scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(axis.text.x = element_text(size = 10,angle = 45, hjust = 0, vjust=0.5),
+        axis.title = element_blank(),
+        axis.text = element_text(size = 6, color = 'black'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent"),
+        legend.position = "none"
+        )
+exp_treattime
+ggsave("G://表达谱//干旱胁迫对照 表达谱.pdf", height = 20, width = 20)
+
+
+ggplot(data) +
+  aes(x = gene, y = Category, fill = value) +
+  geom_tile(color = "white") +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) +
+  scale_x_discrete(limits = index$gene) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 6,angle = 90, hjust = 1,vjust = 0.5))
+ggsave("G://表达谱//heat.pdf", height = 5, width = 20)
+```
+
+### 拆分
+
+
+```{r}
+data <- read.csv("G://表达谱//diff treatment_new.csv")
+data$value <- log10(data$value)
+exp_treattime_1 <- data[1:(7*9),] %>%
+  group_by(gene, Category,xid,yid) %>%
+  # summarise(number = n()) %>%
+  # arrange(desc(number))
+  ggplot() +
+  geom_rect(aes(ymin = xid, ymax = xid+1, xmin = yid, xmax = yid+1, fill = value)) +
+  # geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) + # rev(hcl.colors(9, "RdYlGn"))
+  theme_bw() +
+  scale_x_continuous(breaks = seq(1.5, length(yid)+0.5, 1), labels = yid, expand = c(0,0), position = "top") +
+  scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(axis.text.x = element_blank(),
+        axis.title = element_blank(),
+        axis.text = element_text(size = 12, color = 'black'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent"),
+        legend.position = "none"
+        )
+exp_treattime_1
+
+data <- read.csv("G://表达谱//diff treatment_new.csv")
+data$value <- log10(data$value)
+exp_treattime_2 <- data[(7*9+1):(7*9+7*38),] %>%
+  group_by(gene, Category,xid,yid) %>%
+  # summarise(number = n()) %>%
+  # arrange(desc(number))
+  ggplot() +
+  geom_rect(aes(ymin = xid, ymax = xid+1, xmin = yid, xmax = yid+1, fill = value)) +
+  # geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) + # rev(hcl.colors(9, "RdYlGn"))
+  theme_bw() +
+  scale_x_continuous(breaks = seq(1.5, length(yid)+0.5, 1), labels = yid, expand = c(0,0), position = "top") +
+  scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = element_blank(),
+        axis.text = element_text(size = 12, color = 'black'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent"),
+        legend.position = "none"
+        )
+exp_treattime_2
+
+data <- read.csv("G://表达谱//diff treatment_new.csv")
+data$value <- log10(data$value)
+exp_treattime_3 <- data[(7*9+1+7*38):(7*9+7*38+7*79),] %>%
+  group_by(gene, Category,xid,yid) %>%
+  # summarise(number = n()) %>%
+  # arrange(desc(number))
+  ggplot() +
+  geom_rect(aes(ymin = xid, ymax = xid+1, xmin = yid, xmax = yid+1, fill = value)) +
+  # geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) + # rev(hcl.colors(9, "RdYlGn"))
+  theme_bw() +
+  scale_x_continuous(breaks = seq(1.5, length(yid)+0.5, 1), labels = yid, expand = c(0,0), position = "top") +
+  scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = element_blank(),
+        axis.text = element_text(size = 12, color = 'black'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent"),
+        legend.position = "none"
+        )
+exp_treattime_3
+
+data <- read.csv("G://表达谱//diff treatment_new.csv")
+data$value <- log10(data$value)
+exp_treattime_4 <- data[(7*9+7*38+7*79+1):(7*9+7*38+7*79+7*143),] %>%
+  group_by(gene, Category,xid,yid) %>%
+  # summarise(number = n()) %>%
+  # arrange(desc(number))
+  ggplot() +
+  geom_rect(aes(ymin = xid, ymax = xid+1, xmin = yid, xmax = yid+1, fill = value)) +
+  # geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) + # rev(hcl.colors(9, "RdYlGn"))
+  theme_bw() +
+  scale_x_continuous(breaks = seq(1.5, length(yid)+0.5, 1), labels = yid, expand = c(0,0), position = "top") +
+  scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(axis.text.x = element_text(size = 12, color = "black", angle = 45, hjust = 0, vjust=0.5),
+        axis.title = element_blank(),
+        axis.text = element_text(size = 12, color = 'black'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent"),
+        legend.position = "none"
+        )
+exp_treattime_4
+```
+
+### 拆分合并
+```{r}
+exp_treattime_1 / exp_treattime_2 / exp_treattime_3 /exp_treattime_4 +
+  plot_layout(heights = c(9,38,79,143))
+ggsave("G://figue//expression_new.pdf", plot = last_plot(), height = 20, width = 15)
+```
+
+
+
+
+## 组织水平 干旱胁迫对照 表达谱
+
+
+```{r}
+data <- read.csv("G://表达谱//diff tissue_new.csv")
+data$value <- log10(data$value) 
+exp_tissue <- data %>%
+  group_by(gene, Category,xid,yid) %>%
+  # summarise(number = n()) %>%
+  # arrange(desc(number))
+  ggplot() +
+  geom_rect(aes(ymin = xid, ymax = xid+1, xmin = yid, xmax = yid+1, fill = value)) +
+  # geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) + # rev(hcl.colors(9, "RdYlGn"))
+  theme_bw() +
+  scale_x_continuous(breaks = seq(1.5, length(zid)+0.5, 1), labels = zid, expand = c(0,0), position = "top") +
+  scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(axis.text.x = element_text(size = 10, color = "black", angle = 45, hjust = 0, vjust=0.5),
+        axis.title = element_blank(),
+        # axis.text = element_text(size = 6, color = 'black'),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent"))
+exp_tissue
+ggsave("G://表达谱//干旱胁迫对照 表达谱 组织水平+抗逆易感.pdf", height = 20, width = 5)
+
+ggplot(data) +
+  aes(x = gene, y = Category, fill = value) +
+  geom_tile(color = "white") +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) +
+  scale_x_discrete(limits = index$gene) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 6,angle = 90, hjust = 1,vjust = 0.5))
+ggsave("G://表达谱//heat tissue.pdf", height = 5, width = 20)
+```
+
+### 拆分
+9
+38
+79
+143
+```{r}
+data <- read.csv("G://表达谱//diff tissue_new.csv")
+data$value <- log10(data$value) 
+exp_tissue_1 <- data[1:(24*9),] %>%
+  group_by(gene, Category,xid,yid) %>%
+  # summarise(number = n()) %>%
+  # arrange(desc(number))
+  ggplot() +
+  geom_rect(aes(ymin = xid, ymax = xid+1, xmin = yid, xmax = yid+1, fill = value)) +
+  # geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) + # rev(hcl.colors(9, "RdYlGn"))
+  theme_bw() +
+  scale_x_continuous(breaks = seq(1.5, length(zid)+0.5, 1), labels = zid, expand = c(0,0), position = "top") +
+  scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(axis.text.x = element_blank(),
+        axis.title = element_blank(),
+        # axis.text = element_text(size = 6, color = 'black'),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "none",
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent"))
+exp_tissue_1
+
+
+data <- read.csv("G://表达谱//diff tissue_new.csv")
+data$value <- log10(data$value) 
+exp_tissue_2 <- data[(24*9+1):(24*9+24*38),] %>%
+  group_by(gene, Category,xid,yid) %>%
+  # summarise(number = n()) %>%
+  # arrange(desc(number))
+  ggplot() +
+  geom_rect(aes(ymin = xid, ymax = xid+1, xmin = yid, xmax = yid+1, fill = value)) +
+  # geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) + # rev(hcl.colors(9, "RdYlGn"))
+  theme_bw() +
+  scale_x_continuous(breaks = seq(1.5, length(zid)+0.5, 1), labels = zid, expand = c(0,0), position = "top") +
+  scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = element_blank(),
+        # axis.text = element_text(size = 6, color = 'black'),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "none",
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent"))
+exp_tissue_2
+
+
+data <- read.csv("G://表达谱//diff tissue_new.csv")
+data$value <- log10(data$value) 
+exp_tissue_3 <- data[(24*9+24*38+1):(24*9+24*38+24*79),] %>%
+  group_by(gene, Category,xid,yid) %>%
+  # summarise(number = n()) %>%
+  # arrange(desc(number))
+  ggplot() +
+  geom_rect(aes(ymin = xid, ymax = xid+1, xmin = yid, xmax = yid+1, fill = value)) +
+  # geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) + # rev(hcl.colors(9, "RdYlGn"))
+  theme_bw() +
+  scale_x_continuous(breaks = seq(1.5, length(zid)+0.5, 1), labels = zid, expand = c(0,0), position = "top") +
+  scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = element_blank(),
+        # axis.text = element_text(size = 6, color = 'black'),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent"))
+exp_tissue_3
+
+
+data <- read.csv("G://表达谱//diff tissue_new.csv")
+data$value <- log10(data$value) 
+exp_tissue_4 <- data[(24*9+24*38+24*79+1):(24*9+24*38+24*79+24*143),] %>%
+  group_by(gene, Category,xid,yid) %>%
+  # summarise(number = n()) %>%
+  # arrange(desc(number))
+  ggplot() +
+  geom_rect(aes(ymin = xid, ymax = xid+1, xmin = yid, xmax = yid+1, fill = value)) +
+  # geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) + # rev(hcl.colors(9, "RdYlGn"))
+  theme_bw() +
+  scale_x_continuous(breaks = seq(1.5, length(zid)+0.5, 1), labels = zid, expand = c(0,0), position = "top") +
+  scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(axis.text.x = element_text(size = 12, color = "black", angle = 45, hjust = 0, vjust=0.5),
+        axis.title = element_blank(),
+        # axis.text = element_text(size = 6, color = 'black'),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent"))
+exp_tissue_4
+```
+
+### 拆分合并
+
+```{r}
+exp_tissue_1/exp_tissue_2 /exp_tissue_3 / exp_tissue_4 +
+    plot_layout(heights = c(9,38,79,143))
+ggsave("G://figue//expression_new.pdf", plot = last_plot(), height = 20, width = 15)
+```
+
+### final 合并
+exp_treattime_1 / exp_treattime_2 / exp_treattime_3 /exp_treattime_4 +
+  plot_layout(heights = c(9,38,79,143))
+```{r}
+# (exp_treattime_1 + exp_tissue_1) / (exp_treattime_2 + exp_tissue_2) /(exp_treattime_3 + exp_tissue_3) +
+#   plot_layout(heights = c(9,38,79))
+exp_treattime_1 / exp_treattime_2 / exp_treattime_3+
+  plot_layout(heights = c(9,38,79))
+ggsave("G://figue//expression_new_1.pdf", plot = last_plot(), height = 18, width = 15*8/31)
+
+exp_tissue_1/exp_tissue_2 /exp_tissue_3  +
+    plot_layout(heights = c(9,38,79))
+ggsave("G://figue//expression_new_2.pdf", plot = last_plot(), height = 18, width = 15*21/31)
+
+exp_treattime_4 + exp_tissue_4 +
+    plot_layout(widths = c(7,24))
+ggsave("G://figue//expression_new_3.pdf", plot = last_plot(), height = 20*143/(9+38+79), width = 15)
+```
+
+
+## 合并
+
+```{r}
+exp_treattime+exp_tissue +
+  plot_layout(widths = c(7,24))
+ggsave("G://figue//expression.pdf", plot = last_plot(), height = 20, width = 15)
+```
+
+# Synteny relationship
+
+```{r}
+require(RIdeogram)
+```
+
+```{r}
+karyotype_dual_comparison <- read.csv("F://共线性分析//R plot//At_Ta karyotype.csv")
+head(karyotype_dual_comparison)
+synteny_dual_comparison <- read.csv("F://共线性分析//R plot//At_Ta synteny.csv")
+head(synteny_dual_comparison)
+```
+
+
+```{r}
+ideogram(karyotype = karyotype_dual_comparison, synteny = synteny_dual_comparison,
+         output = 'F://共线性分析//R plot//At-Ta.svg')
+```
+
+# 进化树图例
+
+```{r}
+data <- data.frame(x = 1:10,y = seq(0.1,1,0.1))
+
+data %>%
+  ggplot() +
+  geom_point(aes(x = x, y = y, fill = y)) +
+  # geom_text(aes(x = xid + 0.5,y = yid + 0.5,label = number),col='white',size = 2) +
+  scale_fill_gradientn(colors = c("navy", "white", "firebrick3")) + # rev(hcl.colors(9, "RdYlGn"))
+  theme_bw() +
+  # scale_x_continuous(breaks = seq(1.5, length(yid)+0.5, 1), labels = yid, expand = c(0,0), position = "top") +
+  # scale_y_continuous(breaks = seq(1.5, length(xid) + 0.5, 1), labels = xid, expand = c(0,0)) +
+  theme(axis.text.x = element_text(size = 6,angle = 45, hjust = 0, vjust=0.5),
+        axis.title = element_blank(),
+        axis.text = element_text(size = 6, color = 'black'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.ontop = TRUE,
+        panel.background = element_rect(fill = "transparent")
+        )
+
+ggsave("F://figue//legend for evotree.pdf")
+```
+
+
+# 实验数据mapping-表达量
+
+```{r}
+genexp_1356 <- data.frame(
+    sample = c("3d drought","6d drought",
+               "3d drought","6d drought","3d drought","6d drought",
+               "3d drought","6d drought","3d drought","6d drought"),
+    no = c("1", "1", "3", "3", "5", "5", "6", "6", "actin", "actin"),
+    Expression = c(0.752253396,0.879222311,
+                   1.133874324,2.159761893,0.119989782,14.13524056,
+                   1.163998236,1.587941899,1,1),
+    Upper = c(0.224922852,0.236575188,
+              0.30650436,0.325907117,0.010737748,0.012149148,0.149233856,
+              0.244316103,0.392676667,0.217990194),
+    Lower = c(0.173150933,0.186415711,
+              0.241281982,0.283175986,0.009855767,0.012138715,0.13227513,
+              0.211738618,0.281958243,0.178975328),
+    gene = c("TaC3HC4.20","TaC3HC4.20",
+             "TaCCCH.1","TaCCCH.1","TaCCCH.19","TaCCCH.19","TaPHD.62",
+             "TaPHD.62","TaActin","TaActin"),
+    pvalue = c(0.310799448,0.593776654,
+               0.657993731,0.007089314,0.004740369,0.001842184,
+               0.518959252,0.034686503,0,0)
+)
+as.tibble(genexp_1356)
+```
+
+
+```{r}
+genexp_1356 %>%
+  ggplot() +
+  aes(x = gene, y = Expression, fill = sample) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(gene, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.5), width = 0.05) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "3d drought" = "#42CA8C",
+    "6d drought" = "#B11015"
+  )) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 8
+                                   #,angle = 45,hjust = 1, vjust = 1
+                                   ),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7)
+        # legend.position = "bottom"
+        ) +
+  labs(x = "", y = "Relative Expression") +
+  coord_cartesian(ylim = c(0,16)) +
+  scale_y_continuous(expand = c(0, 0)) +
+# 加显著性标签
+  annotate("text", x = 3.125, y = 2.1597619 + 1, label = "**") +
+  annotate("text", x = 4, y = 14.1352406 + 1, label = "**") +
+  geom_segment(x = 4-0.125, y = 14.1352406 + 0.5, xend = 4+0.125 , yend = 14.1352406 + 0.5)+
+  geom_segment(x = 4-0.125, y = 14.1352406 + 0.5 ,xend = 4-0.125, yend = 14.1352406 + 0.25) +
+  geom_segment(x = 4+0.125, y = 14.1352406 + 0.5 ,xend = 4+0.125, yend = 14.1352406 + 0.25) +
+  annotate("text", x = 5.125, y = 1.5879419 + 1, label = "*")
+ggsave("F://实验数据//gene 1356_relative exp.pdf")
+```
+
+## gene 1
+
+```{r}
+genexp_1356 %>%
+    filter(no %in% c("actin","1")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression) %>% fct_rev()) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "1" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 8
+                                   #,angle = 45,hjust = 1, vjust = 1
+                                   ),
+        axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10)
+        ) +
+  labs(x = "", y = "Relative expression level",title = "TaC3HC4.20") +
+  coord_cartesian(ylim = c(0,1.5)) +
+  scale_y_continuous(expand = c(0, 0)) -> genexplot1
+genexplot1
+```
+
+## gene 3
+
+```{r}
+genexp_1356 %>%
+    filter(no %in% c("actin","3")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "3" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 8
+                                   #,angle = 45,hjust = 1, vjust = 1
+                                   ),
+        axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10)
+        ) +
+  labs(x = "", y = "Relative expression level", title = "TaCCCH.1") +
+  coord_cartesian(ylim = c(0,3)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 2.2, y = 2.1597619 + 0.5, label = "**")  -> genexplot3
+genexplot3
+```
+
+
+## gene 5
+
+```{r}
+genexp_1356 %>%
+    filter(no %in% c("actin","5")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "5" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 8
+                                   #,angle = 45,hjust = 1, vjust = 1
+                                   ),
+        axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10)
+        ) +
+  labs(x = "", y = "Relative expression level", title = "TaCCCH.19") +
+  coord_cartesian(ylim = c(0,16)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 2.2, y = 14.1352406 + 1, label = "**") +
+  annotate("text", x = 1.2, y = 0.1199898 + 1, label = "**") -> genexplot5
+genexplot5
+```
+
+
+### gene5 分图上
+
+```{r}
+genexp_1356 %>%
+    filter(no %in% c("actin","5")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "5" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.y = element_text(size = 7),
+        axis.line.x = element_blank(),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10),
+        plot.margin=unit(c(5.5,5.5,0,8),'pt')
+        ) +
+  labs(x = "", y = "", title = "TaCCCH.19") +
+  coord_cartesian(ylim = c(13,16)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 2.2, y = 14.1352406 + 1, label = "**") +
+  annotate("text", x = 1.2, y = 0.1199898 + 1, label = "**") -> genexplot5_1
+genexplot5_1
+```
+
+
+### gene5 分图下
+
+
+```{r}
+genexp_1356 %>%
+    filter(no %in% c("actin","5")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "5" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 8
+                                   #,angle = 45,hjust = 1, vjust = 1
+                                   ),
+        axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10),
+        plot.margin=unit(c(0,5.5,5.5,5.5),'pt')
+        ) +
+  labs(x = "", y = "Relative expression level", title = "") +
+  coord_cartesian(ylim = c(0,2)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 2.2, y = 14.1352406 + 1, label = "**") +
+  annotate("text", x = 1.2, y = 0.1199898 + 0.7, label = "**") -> genexplot5_2
+genexplot5_2
+```
+
+```{r}
+ggarrange(genexplot5_1,genexplot5_2,heights = c(1.25,1.25), widths = c(1.5,1.5),ncol = 1,nrow = 2)
+ggsave("F://figue//gene5_expression.pdf", plot = last_plot(),height = 2.5, width = 3)
+```
+
+
+## gene 6
+
+```{r}
+genexp_1356 %>%
+    filter(no %in% c("actin","6")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "6" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 8
+                                   #,angle = 45,hjust = 1, vjust = 1
+                                   ),
+        axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10)
+        ) +
+  labs(x = "", y = "Relative expression level", title = "TaPHD.62") +
+  coord_cartesian(ylim = c(0,2.25)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 2.2, y = 1.5879419 + 0.5, label = "*") -> genexplot6
+genexplot6
+```
+
+## 合并
+
+```{r}
+(genexplot1 + genexplot3) / (genexplot5_1/genexplot5_2 | genexplot6) +
+  # theme(axis.title.y = element_text(size = 4)) +
+  plot_layout(widths = c(2,2,2,2))
+ggsave("F://figue//gene1356_expression.pdf", plot = last_plot(),height = 5, width = 6)
+```
+
+## 扣图例
+
+
+```{r}
+genexp_1356 %>%
+    filter(no %in% c("actin","1")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression) %>% fct_rev()) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "1" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 8
+                                   #,angle = 45,hjust = 1, vjust = 1
+                                   ),
+        axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        plot.title = element_text(hjust = 0.5, size = 10)
+        ) +
+  labs(x = "", y = "Relative expression level",title = "TaC3HC4.20") +
+  coord_cartesian(ylim = c(0,1.5)) +
+  scale_y_continuous(expand = c(0, 0))
+ggsave("F://figue//just for legend.pdf", plot = last_plot(),height = 5, width = 6)
+```
+
+
+## gene7-12
+
+```{r}
+genexp_7_12 <- data.frame(
+    sample = c("3d drought","6d drought",
+             "3d drought","6d drought","3d drought","6d drought",
+             "3d drought","6d drought","3d drought","6d drought",
+             "3d drought","6d drought","3d drought","6d drought"),
+    no = c("actin","actin","7","7","8",
+           "8","9","9","10","10","11","11","12","12"),
+    Expression = c(1,1,14.09031804,4.451348687,
+                   22.48621637,6.588848406,23.39860044,8.003334082,
+                   18.106542,3.304516737,19.06295479,6.584549508,51.95943361,
+                   5.462921526),
+    Upper = c(0.25724699,0.254527862,
+              2.68423506,3.179574034,4.485335555,6.067014938,4.064655332,
+              2.561916454,9.023035844,0.952174004,4.269642685,
+              0.386896307,4.440742502,1.707184471),
+    Lower = c(0.628623495,0.627263931,
+              2.254708395,1.854741978,3.739429829,3.158586705,
+              3.463072508,1.940689736,6.022061176,0.739183353,3.488338817,
+              0.365424613,4.091094764,1.300708079),
+    gene = c("TaActin","TaActin",
+             "TaPHD.11","TaPHD.11","TaPHD.16","TaPHD.16","TaPHD.30",
+             "TaPHD.30","TaPHD.39","TaPHD.39","TaPHD.46","TaPHD.46",
+             "TaPHD.7","TaPHD.7"),
+    pvalue = c(1,1,0.007576177,0.026980079,
+                  0.005228564,0.025788399,0.007271379,0.004327706,
+                  0.002014082,0.018839209,0.004241321,0.042166303,
+                  0.016375045,0.02284862)
+)
+as.tibble(genexp_7_12)
+```
+
+### gene 7
+
+
+
+```{r}
+
+genexp_7_12 %>%
+    filter(no %in% c("actin","7")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "7" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(
+    # axis.text.x = element_blank(),
+    # axis.ticks.x = element_blank(),
+        
+    # axis.line.x = element_blank(),
+    axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10)
+        # plot.margin=unit(c(5.5,5.5,0,8),'pt')
+        ) +
+  labs(x = "", y = "Relative expression level", title = "TaPHD.11") +
+  coord_cartesian(ylim = c(0,20)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 1.2, y = 14.090318+2.6842351+2, label = "**") +
+  annotate("text", x = 2.2, y = 4.451349+3.1795740+2, label = "*") -> genexplot7_1
+genexplot7_1
+
+# genexp_7_12 %>%
+#     filter(no %in% c("actin","7")) %>%
+#   ggplot() +
+#   aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+#   geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+#   geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+#   theme_bw() +
+#   scale_fill_manual(name = "Treatment", values = list(
+#     "actin" = "#42CA8C",
+#     "5" = "#B11015"
+#   )) +
+#   theme_classic() +
+#   theme(axis.text.x = element_text(size = 8
+#                                    #,angle = 45,hjust = 1, vjust = 1
+#                                    ),
+#         axis.title.y = element_text(size = 7),
+#         # panel.grid.major.x = element_blank(),
+#         # panel.grid.minor.x = element_blank(),
+#         legend.key.size = unit(0.5,"cm"),
+#         legend.text = element_text(size = 6),
+#         legend.title = element_text(size = 7),
+#         legend.position = "none",
+#         plot.title = element_text(hjust = 0.5, size = 10),
+#         plot.margin=unit(c(0,5.5,5.5,5.5),'pt')
+#         ) +
+#   labs(x = "", y = "Relative expression level", title = "") +
+#   coord_cartesian(ylim = c(0,8)) +
+#   scale_y_continuous(expand = c(0, 0)) +
+#   annotate("text", x = 2.2, y = 14.1352406 + 1, label = "**") +
+#   annotate("text", x = 1.2, y = 0.1199898 + 0.7, label = "**") -> genexplot7_2
+# genexplot7_2
+```
+
+### gene 8
+
+
+```{r}
+genexp_7_12 %>%
+    filter(no %in% c("actin","8")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "8" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(
+    # axis.text.x = element_blank(),
+    # axis.ticks.x = element_blank(),
+        
+    # axis.line.x = element_blank(),
+    axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10)
+        # plot.margin=unit(c(5.5,5.5,0,8),'pt')
+        ) +
+  labs(x = "", y = "Relative expression level", title = "TaPHD.16") +
+  coord_cartesian(ylim = c(0,30)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 1.2, y = 22.486216+4.4853356+2, label = "**") +
+  annotate("text", x = 2.2, y = 6.588848+6.0670149+2, label = "*") -> genexplot8_1
+genexplot8_1
+```
+
+### gene 9
+
+
+```{r}
+genexp_7_12 %>%
+    filter(no %in% c("actin","9")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "9" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10),
+        plot.margin=unit(c(5.5,5.5,0,8),'pt')
+        ) +
+  labs(x = "", y = "", title = "TaPHD.30") +
+  coord_cartesian(ylim = c(19,30)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 1.2, y = 18.106542+9.0230358+2, label = "**") +
+  annotate("text", x = 2.2, y = 8.003334+2.5619165+1, label = "**") -> genexplot9_1
+genexplot9_1
+
+genexp_7_12 %>%
+    filter(no %in% c("actin","9")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "9" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(
+    # axis.text.x = element_blank(),
+    # axis.ticks.x = element_blank(),
+        
+    # axis.line.x = element_blank(),
+    axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10),
+        plot.margin=unit(c(0,5.5,5.5,8),'pt')
+        ) +
+  labs(x = "", y = "Relative expression level", title = "") +
+  coord_cartesian(ylim = c(0,12.9)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 1.2, y = 18.106542+9.0230358+2, label = "**") +
+  annotate("text", x = 2.2, y = 8.003334+2.5619165+0.8, label = "**") -> genexplot9_2
+genexplot9_2
+
+genexplot9_1 / genexplot9_2
+```
+
+### gene 10
+
+```{r}
+genexp_7_12 %>%
+    filter(no %in% c("actin","10")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "10" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10),
+        plot.margin=unit(c(5.5,5.5,0,8),'pt')
+        ) +
+  labs(x = "", y = "", title = "TaPHD.39") +
+  coord_cartesian(ylim = c(11,31)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 1.2, y = 23.398600+4.0646553+1, label = "**") +
+  annotate("text", x = 2.2, y = 3.304517+0.9521740+2, label = "*") -> genexplot10_1
+genexplot10_1
+
+genexp_7_12 %>%
+    filter(no %in% c("actin","10")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "10" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(
+    # axis.text.x = element_blank(),
+    # axis.ticks.x = element_blank(),
+        
+    # axis.line.x = element_blank(),
+    axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10),
+        plot.margin=unit(c(0,5.5,5.5,8),'pt')
+        ) +
+  labs(x = "", y = "Relative expression level", title = "") +
+  coord_cartesian(ylim = c(0,5.5)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 1.2, y = 23.398600+4.0646553+2, label = "**") +
+  annotate("text", x = 2.2, y = 3.304517+0.9521740+0.8, label = "*") -> genexplot10_2
+genexplot10_2
+
+genexplot10_1 / genexplot10_2
+```
+
+
+### gene 11
+
+```{r}
+genexp_7_12 %>%
+    filter(no %in% c("actin","11")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "11" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10),
+        plot.margin=unit(c(5.5,5.5,0,8),'pt')
+        ) +
+  labs(x = "", y = "", title = "TaPHD.46") +
+  coord_cartesian(ylim = c(15.1,27)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 1.2, y = 19.062955+4.2696427+2, label = "**") +
+  annotate("text", x = 2.2, y = 6.584550+0.3868963+2, label = "*") -> genexplot11_1
+genexplot11_1
+
+
+genexp_7_12 %>%
+    filter(no %in% c("actin","11")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "11" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(
+    # axis.text.x = element_blank(),
+    # axis.ticks.x = element_blank(),
+        
+    # axis.line.x = element_blank(),
+    axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10)
+        # plot.margin=unit(c(5.5,5.5,0,8),'pt')
+        ) +
+  labs(x = "", y = "Relative expression level", title = "") +
+  coord_cartesian(ylim = c(0,8.6)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 1.2, y = 19.062955+4.2696427+2, label = "**") +
+  annotate("text", x = 2.2, y = 6.584550+0.3868963+0.8, label = "*") -> genexplot11_2
+genexplot11_2
+
+genexplot11_1 / genexplot11_2
+```
+
+### gene 12
+
+
+```{r}
+genexp_7_12 %>%
+    filter(no %in% c("actin","12")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "12" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10),
+        plot.margin=unit(c(5.5,5.5,0,8),'pt')
+        ) +
+  labs(x = "", y = "", title = "TaPHD.7") +
+  coord_cartesian(ylim = c(46,60)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 1.2, y = 51.959434+4.4407425+2, label = "**") +
+  annotate("text", x = 2.2, y = 5.462922+1.7071845+2, label = "*") -> genexplot12_1
+genexplot12_1
+
+
+genexp_7_12 %>%
+    filter(no %in% c("actin","12")) %>%
+  ggplot() +
+  aes(x = sample, y = Expression, fill = fct_reorder(no,Expression)) +
+  geom_bar(stat = "identity", width = 0.4, position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(sample, ymin = Expression+Upper,ymax = Expression-Lower),position = position_dodge(width = 0.8), width = 0.08) +
+  theme_bw() +
+  scale_fill_manual(name = "Treatment", values = list(
+    "actin" = "#42CA8C",
+    "12" = "#B11015"
+  )) +
+  theme_classic() +
+  theme(
+    # axis.text.x = element_blank(),
+    # axis.ticks.x = element_blank(),
+        
+    # axis.line.x = element_blank(),
+    axis.title.y = element_text(size = 7),
+        # panel.grid.major.x = element_blank(),
+        # panel.grid.minor.x = element_blank(),
+        legend.key.size = unit(0.5,"cm"),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 7),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 10)
+        # plot.margin=unit(c(5.5,5.5,0,8),'pt')
+        ) +
+  labs(x = "", y = "Relative expression level", title = "") +
+  coord_cartesian(ylim = c(0,9)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  annotate("text", x = 1.2, y = 51.959434+4.4407425+2, label = "**") +
+  annotate("text", x = 2.2, y = 5.462922+1.7071845+1, label = "*") -> genexplot12_2
+genexplot12_2
+genexplot12_1 / genexplot12_2
+```
+
+## 合并
+
+```{r}
+(genexplot1 | genexplot3 | (genexplot5_1/genexplot5_2)) / (genexplot6 + genexplot7_1 + genexplot8_1) / ((genexplot9_1 / genexplot9_2) | (genexplot10_1 / genexplot10_2) | (genexplot11_1 / genexplot11_2)) / ((genexplot12_1 / genexplot12_2) | (genexplot12_1 / genexplot12_2) |(genexplot12_1 / genexplot12_2))
+  # theme(axis.title.y = element_text(size = 4)) +
+ggsave("F://figue//gene13_5-12_expression.pdf", plot = last_plot(),height = 10, width = 9)
+```
+
+
+
+
